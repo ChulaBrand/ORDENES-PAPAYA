@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <title>Chula Brand - Reporte de Papaya</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 <style>
   :root {
     --purple: #5B2A86;
@@ -112,10 +110,14 @@
   </div>
 </main>
 
-<footer>Chula Brand · Reporte de Papaya · procesamiento 100% local en tu navegador</footer>
+<footer>Chula Brand · Reporte de Papaya · procesamiento 100% local en tu navegador · v3 (2026-07-06)</footer>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+if (typeof pdfjsLib !== "undefined") {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+} else {
+  console.warn("pdf.js no cargó (revisa tu conexión a internet)");
+}
 
 // ===========================================================================
 // CONFIG - reglas de negocio (editar aqui si cambian las reglas)
@@ -399,6 +401,308 @@ function buildReportRows(orders) {
 }
 
 // ===========================================================================
+// Generador de .docx propio (sin librerias externas) - construye el ZIP a mano
+// ===========================================================================
+function crc32(bytes) {
+  let table = crc32.table;
+  if (!table) {
+    table = crc32.table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      table[n] = c >>> 0;
+    }
+  }
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) crc = table[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function buildZip(files) {
+  const localParts = [], centralParts = [];
+  let offset = 0;
+  const dosTime = 0, dosDate = 0x21;
+  const enc = new TextEncoder();
+
+  for (const f of files) {
+    const nameBytes = enc.encode(f.name);
+    const data = f.content;
+    const crc = crc32(data);
+    const size = data.length;
+
+    const localHeader = new ArrayBuffer(30);
+    const lv = new DataView(localHeader);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(6, 0, true);
+    lv.setUint16(8, 0, true);
+    lv.setUint16(10, dosTime, true);
+    lv.setUint16(12, dosDate, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, size, true);
+    lv.setUint32(22, size, true);
+    lv.setUint16(26, nameBytes.length, true);
+    lv.setUint16(28, 0, true);
+    localParts.push(new Uint8Array(localHeader), nameBytes, data);
+
+    const centralHeader = new ArrayBuffer(46);
+    const cv = new DataView(centralHeader);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, dosTime, true);
+    cv.setUint16(14, dosDate, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, size, true);
+    cv.setUint32(24, size, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint16(30, 0, true);
+    cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true);
+    cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true);
+    cv.setUint32(42, offset, true);
+    centralParts.push(new Uint8Array(centralHeader), nameBytes);
+
+    offset += localHeader.byteLength + nameBytes.length + data.length;
+  }
+
+  const centralStart = offset;
+  let centralSize = 0;
+  for (const p of centralParts) centralSize += p.length;
+
+  const eocd = new ArrayBuffer(22);
+  const ev = new DataView(eocd);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, centralStart, true);
+
+  const allParts = [...localParts, ...centralParts, new Uint8Array(eocd)];
+  let totalLen = 0;
+  for (const p of allParts) totalLen += p.length;
+  const out = new Uint8Array(totalLen);
+  let pos = 0;
+  for (const p of allParts) { out.set(p, pos); pos += p.length; }
+  return out;
+}
+
+const DOCX_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+</Types>`;
+
+const DOCX_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+const DOCX_DOC_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+</Relationships>`;
+
+const DOCX_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/></w:rPr></w:rPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
+</w:styles>`;
+
+const DOCX_NUMBERING = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:abstractNum w:abstractNumId="0">
+<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="&#9679;"/><w:lvlJc w:val="left"/>
+<w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>
+<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:hint="default"/></w:rPr></w:lvl>
+</w:abstractNum>
+<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>
+</w:numbering>`;
+
+function xmlEsc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function docxRun(text, size) {
+  return `<w:r><w:rPr><w:b/><w:i/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="${size || 20}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r>`;
+}
+function docxTab() {
+  return `<w:r><w:rPr><w:b/><w:i/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/></w:rPr><w:tab/></w:r>`;
+}
+function docxBulletParagraph(pallets, cliente, codigo) {
+  return `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>` +
+    `<w:tabs><w:tab w:val="left" w:pos="2300"/><w:tab w:val="left" w:pos="5100"/></w:tabs>` +
+    `<w:spacing w:after="60"/></w:pPr>` +
+    docxRun(pallets) + docxTab() + docxRun(cliente) + docxTab() + docxRun(codigo) + `</w:p>`;
+}
+function docxTitleParagraph(text) {
+  return `<w:p><w:pPr><w:spacing w:after="200"/></w:pPr>` +
+    `<w:r><w:rPr><w:b/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/></w:rPr>` +
+    `<w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p>`;
+}
+
+function buildDocxBlob(title, rows) {
+  let body = docxTitleParagraph(title);
+  for (const r of rows) body += docxBulletParagraph(r.pallets, r.cliente_corto, r.codigo);
+  body += `<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="900" w:bottom="900" w:left="900" w:right="900"/></w:sectPr>`;
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`;
+
+  const enc = new TextEncoder();
+  const files = [
+    { name: "[Content_Types].xml", content: enc.encode(DOCX_CONTENT_TYPES) },
+    { name: "_rels/.rels", content: enc.encode(DOCX_RELS) },
+    { name: "word/_rels/document.xml.rels", content: enc.encode(DOCX_DOC_RELS) },
+    { name: "word/styles.xml", content: enc.encode(DOCX_STYLES) },
+    { name: "word/numbering.xml", content: enc.encode(DOCX_NUMBERING) },
+    { name: "word/document.xml", content: enc.encode(documentXml) },
+  ];
+  const zipBytes = buildZip(files);
+  return new Blob([zipBytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+}
+
+// ===========================================================================
+// Generador de .xlsx propio con estilos (titulo azul, encabezados, filas alternadas)
+// ===========================================================================
+const XLSX_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+
+const XLSX_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+const XLSX_WORKBOOK = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="Papaya" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+
+const XLSX_WORKBOOK_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+const XLSX_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="4">
+<font><sz val="11"/><name val="Arial"/></font>
+<font><b/><sz val="14"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>
+<font><b/><sz val="11"/><name val="Arial"/></font>
+</fonts>
+<fills count="5">
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF1F3864"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF2E5395"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFD9E2F3"/><bgColor indexed="64"/></patternFill></fill>
+</fills>
+<borders count="2">
+<border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left style="thin"><color rgb="FFAAAAAA"/></left><right style="thin"><color rgb="FFAAAAAA"/></right><top style="thin"><color rgb="FFAAAAAA"/></top><bottom style="thin"><color rgb="FFAAAAAA"/></bottom><diagonal/></border>
+</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="8">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+</cellXfs>
+</styleSheet>`;
+
+function xlsxColLetter(n) {
+  let s = "";
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+function xlsxEsc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function xlsxCell(col, row, value, style, isNum) {
+  const ref = `${xlsxColLetter(col)}${row}`;
+  const s = style || 0;
+  if (isNum) return `<c r="${ref}" s="${s}"><v>${value}</v></c>`;
+  return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xlsxEsc(value)}</t></is></c>`;
+}
+
+function buildXlsxBlob(title, rows, flags) {
+  const rowsXml = [];
+  rowsXml.push(`<row r="1">${xlsxCell(1, 1, title, 1)}</row>`);
+  const headers = ["#", "PALLETS", "CLIENTE", "COLOR Y TAMAÑO"];
+  rowsXml.push(`<row r="3">${headers.map((h, i) => xlsxCell(i + 1, 3, h, 2)).join("")}</row>`);
+
+  let r = 4, total = 0;
+  rows.forEach((row, i) => {
+    const idx = i + 1;
+    const baseStyle = (idx % 2 === 0) ? 4 : 3;
+    const palletsStyle = (idx % 2 === 0) ? 7 : 6;
+    const cells = xlsxCell(1, r, idx, baseStyle, true) +
+      xlsxCell(2, r, row.pallets, palletsStyle) +
+      xlsxCell(3, r, row.cliente_corto, baseStyle) +
+      xlsxCell(4, r, row.codigo, baseStyle);
+    rowsXml.push(`<row r="${r}">${cells}</row>`);
+    total += row.pallets_num;
+    r++;
+  });
+
+  const totalCells = xlsxCell(1, r, "TOTAL", 5) + xlsxCell(2, r, total, 6, true) + xlsxCell(3, r, "", 3) + xlsxCell(4, r, "", 3);
+  rowsXml.push(`<row r="${r}">${totalCells}</row>`);
+  r += 2;
+
+  if (flags && flags.length) {
+    rowsXml.push(`<row r="${r}">${xlsxCell(1, r, "REVISAR:", 5)}</row>`);
+    r++;
+    for (const f of flags) {
+      rowsXml.push(`<row r="${r}">${xlsxCell(1, r, "- " + f, 0)}</row>`);
+      r++;
+    }
+  }
+
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+    `<cols><col min="1" max="1" width="6" customWidth="1"/>` +
+    `<col min="2" max="2" width="16" customWidth="1"/>` +
+    `<col min="3" max="3" width="32" customWidth="1"/>` +
+    `<col min="4" max="4" width="42" customWidth="1"/></cols>` +
+    `<sheetData>${rowsXml.join("")}</sheetData>` +
+    `<mergeCells count="1"><mergeCell ref="A1:D1"/></mergeCells>` +
+    `</worksheet>`;
+
+  const enc = new TextEncoder();
+  const files = [
+    { name: "[Content_Types].xml", content: enc.encode(XLSX_CONTENT_TYPES) },
+    { name: "_rels/.rels", content: enc.encode(XLSX_RELS) },
+    { name: "xl/workbook.xml", content: enc.encode(XLSX_WORKBOOK) },
+    { name: "xl/_rels/workbook.xml.rels", content: enc.encode(XLSX_WORKBOOK_RELS) },
+    { name: "xl/styles.xml", content: enc.encode(XLSX_STYLES) },
+    { name: "xl/worksheets/sheet1.xml", content: enc.encode(sheetXml) },
+  ];
+  const zipBytes = buildZip(files);
+  return new Blob([zipBytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+// ===========================================================================
 // UI
 // ===========================================================================
 const dropzone = document.getElementById("dropzone");
@@ -440,6 +744,10 @@ resetBtn.addEventListener("click", () => {
 async function handleFile(file) {
   if (file.type !== "application/pdf") {
     statusEl.textContent = "Ese archivo no es un PDF.";
+    return;
+  }
+  if (typeof pdfjsLib === "undefined") {
+    statusEl.textContent = "No se pudo cargar la librería para leer PDFs (revisa tu conexión a internet y recarga la página).";
     return;
   }
   lastFileName = file.name.replace(/\.pdf$/i, "");
@@ -492,41 +800,16 @@ function renderResults(rows, flags) {
 }
 
 downloadExcelBtn.addEventListener("click", () => {
-  const data = [["#", "PALLETS", "CLIENTE", "COLOR Y TAMAÑO"]];
-  lastRows.forEach((r, i) => data.push([i + 1, r.pallets, r.cliente_corto, r.codigo]));
-  const total = lastRows.reduce((s, r) => s + r.pallets_num, 0);
-  data.push(["TOTAL", total, "", ""]);
-  if (lastFlags.length) {
-    data.push([]);
-    data.push(["REVISAR:"]);
-    lastFlags.forEach(f => data.push([f]));
-  }
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  ws["!cols"] = [{ wch: 6 }, { wch: 16 }, { wch: 32 }, { wch: 40 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Papaya");
-  XLSX.writeFile(wb, `Papaya_Report_${lastFileName}.xlsx`);
+  const blob = buildXlsxBlob(`CHULA BRAND - PAPAYA REPORT ${lastFileName}`, lastRows, lastFlags);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `Papaya_Report_${lastFileName}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 });
 
-downloadWordBtn.addEventListener("click", async () => {
-  const { Document, Packer, Paragraph, TextRun, TabStopType } = docx;
-  const TAB1 = 2300, TAB2 = 5100;
-  const bulletLine = (pallets, cliente, codigo) => new Paragraph({
-    bullet: { level: 0 },
-    tabStops: [{ type: TabStopType.LEFT, position: TAB1 }, { type: TabStopType.LEFT, position: TAB2 }],
-    spacing: { after: 60 },
-    children: [new TextRun({ text: `${pallets}\t${cliente}\t${codigo}`, bold: true, italics: true, font: "Arial", size: 20 })],
-  });
-  const doc = new Document({
-    sections: [{
-      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 900, bottom: 900, left: 900, right: 900 } } },
-      children: [
-        new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: `CHULA BRAND - PAPAYA REPORT ${lastFileName}`, bold: true, font: "Arial", size: 24 })] }),
-        ...lastRows.map(r => bulletLine(r.pallets, r.cliente_corto, r.codigo)),
-      ],
-    }],
-  });
-  const blob = await Packer.toBlob(doc);
+downloadWordBtn.addEventListener("click", () => {
+  const blob = buildDocxBlob(`CHULA BRAND - PAPAYA REPORT ${lastFileName}`, lastRows);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = `Papaya_Report_${lastFileName}.docx`;
