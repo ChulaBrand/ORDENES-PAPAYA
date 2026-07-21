@@ -2,838 +2,717 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Chula Brand - Reporte de Papaya</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspección de Calidad — Registro cada 15 min</title>
 <style>
-  :root {
-    --purple: #5B2A86;
-    --purple-dark: #3E1D5E;
-    --papaya: #FF8C42;
-    --bg: #F7F5FA;
-    --card: #FFFFFF;
-    --border: #E3DDEC;
-    --text: #2B2233;
-    --muted: #756B85;
-    --red: #B3261E;
+  :root{
+    --bg:#0f172a;
+    --panel:#ffffff;
+    --panel-2:#f8fafc;
+    --border:#e2e8f0;
+    --text:#1e293b;
+    --muted:#64748b;
+    --ok:#16a34a;
+    --ok-bg:#dcfce7;
+    --bad:#dc2626;
+    --bad-bg:#fee2e2;
+    --accent:#2563eb;
+    --accent-dark:#1d4ed8;
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    background: var(--bg); color: var(--text);
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(180deg,#0f172a 0%,#1e293b 260px,#f1f5f9 260px);
+    color:var(--text);
+    min-height:100vh;
   }
-  header {
-    background: linear-gradient(135deg, var(--purple), var(--purple-dark));
-    color: white; padding: 28px 32px;
+  header{
+    max-width:960px;
+    margin:0 auto;
+    padding:28px 20px 10px;
+    color:#fff;
   }
-  header h1 { margin: 0; font-size: 22px; display: flex; align-items: center; gap: 10px; }
-  header p { margin: 6px 0 0; opacity: 0.85; font-size: 14px; }
-  main { max-width: 900px; margin: 0 auto; padding: 28px 20px 60px; }
-  .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-    padding: 24px; margin-bottom: 20px;
+  header h1{
+    margin:0 0 4px;
+    font-size:22px;
+    font-weight:600;
   }
-  #dropzone {
-    border: 2px dashed var(--purple); border-radius: 12px; padding: 40px 20px;
-    text-align: center; cursor: pointer; transition: background 0.15s;
-    background: #FBF9FD;
+  header p{
+    margin:0;
+    color:#94a3b8;
+    font-size:14px;
   }
-  #dropzone.drag { background: #F0E9F7; }
-  #dropzone p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
-  #dropzone .icon { font-size: 40px; }
-  #fileInput { display: none; }
-  button {
-    background: var(--purple); color: white; border: none; border-radius: 8px;
-    padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+  .clock-row{
+    display:flex;
+    gap:16px;
+    margin-top:18px;
+    flex-wrap:wrap;
   }
-  button:hover { background: var(--purple-dark); }
-  button:disabled { background: #C9C1D3; cursor: not-allowed; }
-  button.secondary { background: var(--papaya); }
-  button.secondary:hover { background: #E5762B; }
-  #status { font-size: 14px; color: var(--muted); margin-top: 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 16px; }
-  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
-  th { background: var(--purple); color: white; position: sticky; top: 0; }
-  tr:nth-child(even) td { background: #F3EEF9; }
-  .pallets-col { text-align: center; white-space: nowrap; }
-  #flags { margin-top: 16px; }
-  #flags .flag { color: var(--red); font-size: 13px; font-style: italic; margin-bottom: 4px; }
-  #summary { font-size: 14px; margin-top: 14px; }
-  #summary b { color: var(--purple); }
-  .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
-  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; }
-  .hidden { display: none; }
-  #sheetsBox { margin-top: 16px; }
-  #sheetsText {
-    width: 100%; height: 220px; font-family: Consolas, Monaco, monospace; font-size: 12px;
-    border: 1px solid var(--border); border-radius: 8px; padding: 10px; resize: vertical;
-    background: #FAFAFA; color: var(--text);
+  .clock-card{
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:12px;
+    padding:14px 20px;
+    flex:1;
+    min-width:180px;
   }
-  #copyStatus { margin-left: 10px; font-size: 13px; color: var(--purple); }
+  .clock-card .label{
+    font-size:12px;
+    color:#94a3b8;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .clock-card .value{
+    font-size:26px;
+    font-weight:700;
+    margin-top:4px;
+    font-variant-numeric:tabular-nums;
+  }
+  main{
+    max-width:960px;
+    margin:0 auto;
+    padding:20px;
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
+  .card h2{
+    margin:0 0 14px;
+    font-size:16px;
+  }
+  .field{
+    margin-bottom:12px;
+  }
+  .field label{
+    display:block;
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .field input{
+    width:100%;
+    padding:9px 11px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:14px;
+    background:var(--panel-2);
+  }
+  .field input:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+    background:#fff;
+  }
+  .row-inline{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:flex-end;
+  }
+  .row-inline .field{
+    flex:1;
+    min-width:220px;
+    margin-bottom:0;
+  }
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+    font-size:14px;
+    font-weight:600;
+    padding:10px 16px;
+  }
+  .btn-primary{
+    background:var(--accent);
+    color:#fff;
+  }
+  .btn-primary:hover{ background:var(--accent-dark); }
+  .btn-secondary{
+    background:var(--panel-2);
+    color:var(--text);
+    border:1px solid var(--border);
+  }
+  .btn-secondary:hover{ background:#eef2f7; }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  #estadoConexion{
+    font-size:13px;
+    margin-top:8px;
+    color:var(--muted);
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  th,td{
+    text-align:left;
+    padding:8px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  th{
+    color:var(--muted);
+    font-weight:600;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+  }
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:3px 9px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+  }
+  .badge-ok{ background:var(--ok-bg); color:var(--ok); }
+  .badge-bad{ background:var(--bad-bg); color:var(--bad); }
+  .badge-dot{
+    width:7px;height:7px;border-radius:50%;background:currentColor;
+  }
+  .empty{
+    color:var(--muted);
+    font-size:13px;
+    padding:20px 0;
+    text-align:center;
+  }
+  /* Modal */
+  #modalOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,0.72);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    z-index:50;
+  }
+  #modalOverlay.hidden{ display:none; }
+  #modalCard{
+    background:#fff;
+    border-radius:16px;
+    max-width:760px;
+    width:100%;
+    max-height:92vh;
+    overflow-y:auto;
+    padding:26px;
+    animation:pop .18s ease-out;
+  }
+  @keyframes pop{
+    from{ transform:scale(.96); opacity:0; }
+    to{ transform:scale(1); opacity:1; }
+  }
+  #modalOverlay.auto #modalCard{
+    box-shadow:0 0 0 3px var(--accent), 0 20px 50px rgba(0,0,0,0.35);
+  }
+  #modalCard h2{
+    margin:0 0 2px;
+    font-size:19px;
+  }
+  #modalCard .sub{
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:18px;
+  }
+  .muestra-block{
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:12px;
+  }
+  .muestra-block .m-title{
+    font-weight:600;
+    font-size:14px;
+    margin-bottom:10px;
+  }
+  .indicador-group{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+    margin-bottom:8px;
+  }
+  .indicador{
+    flex:1;
+    min-width:220px;
+  }
+  .indicador > .ind-label{
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .toggle-pair{
+    display:flex;
+    gap:8px;
+  }
+  .toggle-btn{
+    flex:1;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--panel-2);
+    color:var(--text);
+    font-weight:600;
+    font-size:13px;
+    transition:all .1s;
+  }
+  .toggle-btn.ok.selected{
+    background:var(--ok);
+    border-color:var(--ok);
+    color:#fff;
+  }
+  .toggle-btn.bad.selected{
+    background:var(--bad);
+    border-color:var(--bad);
+    color:#fff;
+  }
+  .obs-field{
+    margin-top:10px;
+    display:none;
+  }
+  .obs-field.show{ display:block; }
+  .obs-field textarea{
+    width:100%;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-family:inherit;
+    font-size:13px;
+    resize:vertical;
+    min-height:44px;
+  }
+  #modalFooter{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-top:16px;
+    flex-wrap:wrap;
+  }
+  #modalError{
+    color:var(--bad);
+    font-size:13px;
+    display:none;
+  }
+  .toast{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    background:#1e293b;
+    color:#fff;
+    padding:11px 18px;
+    border-radius:10px;
+    font-size:13px;
+    z-index:100;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s;
+  }
+  .toast.show{ opacity:1; }
+  .footer-note{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.5;
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🥭 Chula Brand — Reporte de Papaya</h1>
-  <p>Sube el PDF de "Sales Orders Not Shipped" y descarga el Excel de pallets. Todo corre en tu navegador, no se sube nada a ningún servidor.</p>
+  <h1>Inspección de Calidad — Registro cada 15 min</h1>
+  <p>Cada 15 minutos se abre automáticamente el formulario para registrar las 4 muestras del momento.</p>
+  <div class="clock-row">
+    <div class="clock-card">
+      <div class="label">Hora actual</div>
+      <div class="value" id="relojActual">--:--:--</div>
+    </div>
+    <div class="clock-card">
+      <div class="label">Próxima ronda</div>
+      <div class="value" id="proximaRonda">--:--</div>
+    </div>
+    <div class="clock-card">
+      <div class="label">Rondas registradas hoy</div>
+      <div class="value" id="contadorRondas">0</div>
+    </div>
+  </div>
 </header>
 
 <main>
+
   <div class="card">
-    <div id="dropzone">
-      <div class="icon">📄</div>
-      <strong>Haz clic aquí o arrastra el PDF</strong>
-      <p>Ejemplo: SALES ORDERS NOT SHIPPED FOR 07/06/26.pdf</p>
+    <h2>Configuración</h2>
+    <div class="row-inline">
+      <div class="field">
+        <label for="inspectorName">Inspector / turno</label>
+        <input id="inspectorName" type="text" placeholder="Ej: Roberto — Turno 1">
+      </div>
+      <div class="field">
+        <label for="sheetsUrl">URL del Web App de Google Sheets (opcional)</label>
+        <input id="sheetsUrl" type="text" value="https://script.google.com/macros/s/AKfycbyHf5fvYuOn8Ti4hcRHr0sxMFAx28AMWPpgbhacQlpRvAxQPM0hfCaZCGB6OWYSp-B-ng/exec" placeholder="Pega aquí la URL que te da Google Apps Script">
+      </div>
     </div>
-    <input type="file" id="fileInput" accept="application/pdf">
-    <div id="status"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="testConnBtn">Enviar registro de prueba</button>
+    </div>
+    <div id="estadoConexion"></div>
   </div>
 
-  <div class="card hidden" id="resultsCard">
-    <div id="summary"></div>
-    <div class="actions">
-      <button id="downloadExcelBtn" class="secondary">⬇ Excel</button>
-      <button id="downloadWordBtn" class="secondary">⬇ Word</button>
-      <button id="showSheetsBtn" class="secondary">📋 Lista para Sheets</button>
-      <button id="resetBtn">Procesar otro PDF</button>
-    </div>
-    <div id="sheetsBox" class="hidden">
-      <textarea id="sheetsText" readonly></textarea>
-      <button id="copySheetsBtn">Copiar al portapapeles</button>
-      <span id="copyStatus"></span>
-    </div>
-    <div id="flags"></div>
-    <table id="resultsTable">
-      <thead><tr><th>#</th><th>PALLETS</th><th>CLIENTE</th><th>COLOR Y TAMAÑO</th></tr></thead>
-      <tbody></tbody>
+  <div class="card">
+    <h2>Historial de rondas</h2>
+    <table id="tablaHistorial">
+      <thead>
+        <tr>
+          <th>Hora ronda</th>
+          <th>Muestra</th>
+          <th>Secuencia</th>
+          <th>Concordancia</th>
+          <th>Observación</th>
+        </tr>
+      </thead>
+      <tbody id="historialBody"></tbody>
     </table>
+    <div class="empty" id="historialVacio">Todavía no hay registros en esta sesión.</div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="exportBtn">Exportar historial a CSV / Excel</button>
+      <button class="btn-primary" id="manualBtn">Registrar ronda ahora</button>
+    </div>
+    <p class="footer-note">
+      El historial de esta tabla vive mientras la página esté abierta (no se guarda al recargar). Lo que sí queda guardado de forma permanente es lo que se envía a Google Sheets, por eso conviene tener configurada la URL arriba. Exporta a CSV cuando quieras respaldar lo visto en pantalla.
+    </p>
   </div>
+
 </main>
 
-<footer>Chula Brand · Reporte de Papaya · procesamiento 100% local en tu navegador · v3 (2026-07-06)</footer>
+<div id="modalOverlay" class="hidden">
+  <div id="modalCard">
+    <h2 id="modalTitle">Ronda de las --:--</h2>
+    <div class="sub" id="modalSub">Revisa las 4 muestras y marca Secuencia y Concordancia para cada una.</div>
+    <div id="modalRows"></div>
+    <div id="modalError">Falta marcar Secuencia y/o Concordancia en alguna muestra.</div>
+    <div id="modalFooter">
+      <button class="btn-secondary" id="posponerBtn">Posponer 2 min</button>
+      <button class="btn-primary" id="guardarBtn">Guardar registro</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-if (typeof pdfjsLib !== "undefined") {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-} else {
-  console.warn("pdf.js no cargó (revisa tu conexión a internet)");
-}
+(function(){
+  "use strict";
 
-// ===========================================================================
-// CONFIG - reglas de negocio (editar aqui si cambian las reglas)
-// ===========================================================================
-const SAMS_DIVISOR_CLIENTS = new Set([
-  "terrell", "paul's valley", "harrisonville", "cocoa",
-  "johnstown", "mankato", "robert", "monroe", "cheyenne", "r&r produce"
-]);
-const STANDARD_DIVISOR = 48, SAMS_DIVISOR = 40, HEB_DIVISOR = 60;
+  var historial = [];          // {horaRonda, muestra, secuencia, concordancia, observacion, inspector, ts}
+  var rondasRegistradas = new Set(); // claves "HH:MM" ya guardadas, para no duplicar
+  var ultimaClaveDisparada = null;
+  var modalAbierto = false;
+  var minutosPospuestos = 0;
 
-const NAME_STRIP_PATTERNS = [
-  /,?\s*Sales Corp\.?\s*$/,
-  /,?\s*L\.?L\.?C\.?\s*$/,
-  /,?\s*Inc\.?\s*$/,
-  /,?\s*Corp\.?\s*$/,
-  /,?\s*Co\.?\s*$/,
-  /,?\s*Ltd\.?\s*$/,
-  /,?\s*W\.?W\.?,?\s*Inc\.?\s*$/,
-];
-const REDUNDANT_WORD_STRIPS = [
-  [/\bWholesale Produce\b/, ""],
-  [/\bWholesale\b/, ""],
-  [/\bCompany\b/, ""],
-];
-const NAME_OVERRIDES = {
-  "a. garcia trucking & produce": "A. Garcia Trucking",
-  "s. katzman produce": "S. Katzman",
-  "sweet seasons maryland": "Sweet Seasons",
-  "ch robinson w.w.": "CH Robinson",
-};
+  var relojEl = document.getElementById("relojActual");
+  var proximaEl = document.getElementById("proximaRonda");
+  var contadorEl = document.getElementById("contadorRondas");
+  var overlay = document.getElementById("modalOverlay");
+  var modalTitle = document.getElementById("modalTitle");
+  var modalRows = document.getElementById("modalRows");
+  var modalError = document.getElementById("modalError");
+  var historialBody = document.getElementById("historialBody");
+  var historialVacio = document.getElementById("historialVacio");
+  var toastEl = document.getElementById("toast");
+  var estadoConexionEl = document.getElementById("estadoConexion");
 
-// ===========================================================================
-// STEP 1: extraer lineas del PDF
-// ===========================================================================
-async function extractLines(arrayBuffer) {
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const lines = [];
-  for (let p = 1; p <= pdf.numPages; p++) {
-    const page = await pdf.getPage(p);
-    const content = await page.getTextContent();
-    const items = content.items
-      .map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] }))
-      .filter(it => it.str.trim().length > 0);
-    items.sort((a, b) => (b.y - a.y) || (a.x - b.x));
+  function pad(n){ return String(n).padStart(2,"0"); }
 
-    const pageLines = [];
-    let currentY = null, currentLine = [];
-    for (const it of items) {
-      if (currentY === null || Math.abs(it.y - currentY) > 2) {
-        if (currentLine.length) pageLines.push(currentLine);
-        currentLine = [it];
-        currentY = it.y;
-      } else {
-        currentLine.push(it);
-      }
-    }
-    if (currentLine.length) pageLines.push(currentLine);
-
-    for (const line of pageLines) {
-      line.sort((a, b) => a.x - b.x);
-      let text = line.map(it => it.str).join(" ").replace(/\s{2,}/g, " ").trim();
-      if (!text) continue;
-      if (text.startsWith("SALES ORDERS") || text.startsWith("DATE TIME")) continue;
-      lines.push(text);
-    }
+  function claveRonda(d){
+    return pad(d.getHours()) + ":" + pad(d.getMinutes());
   }
-  return lines;
-}
 
-// ===========================================================================
-// STEP 2: agrupar lineas en ordenes
-// ===========================================================================
-const ORDER_HEADER_RE = /^(\d{2}\/\d{2}\/\d{2})\s+(?:\d{1,2}:\d{2}\s+)?(.+?)\s+(\d+)\s+(SP\d+)\s+([DF])\s+([A-Z]+)\s+([\d,]+)(.*)$/;
-const QTY_PRODUCT_RE = /^([\d,]+)?\s*(.+)$/;
+  function siguienteMarca(d){
+    var next = new Date(d);
+    var m = next.getMinutes();
+    var restante = 15 - (m % 15);
+    next.setMinutes(m + restante, 0, 0);
+    return next;
+  }
 
-function parseOrders(lines) {
-  const orders = [];
-  let current = null;
-  for (const line of lines) {
-    const m = line.match(ORDER_HEADER_RE);
-    if (m) {
-      if (current) orders.push(current);
-      const [, date, name, stnum, sp, status, spn, units, rest] = m;
-      current = {
-        date, name: name.trim(), stnum, sp, status, spn,
-        units: units.replace(/,/g, ""), note: rest.trim(), products: []
-      };
-    } else if (current !== null) {
-      const qm = line.match(QTY_PRODUCT_RE);
-      if (qm) {
-        const qtyStr = qm[1], desc = qm[2];
-        const qty = qtyStr ? parseInt(qtyStr.replace(/,/g, ""), 10) : null;
-        current.products.push([qty, desc.trim()]);
+  function actualizarReloj(){
+    var now = new Date();
+    relojEl.textContent = pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+    var prox = siguienteMarca(now);
+    proximaEl.textContent = pad(prox.getHours()) + ":" + pad(prox.getMinutes());
+    verificarDisparo(now);
+  }
+
+  function verificarDisparo(now){
+    if (modalAbierto) return;
+    var minuto = now.getMinutes();
+    var segundo = now.getSeconds();
+    if (minuto % 15 === 0 && segundo < 5){
+      var clave = claveRonda(now);
+      if (clave !== ultimaClaveDisparada && !rondasRegistradas.has(clave)){
+        ultimaClaveDisparada = clave;
+        abrirModal(clave, true);
       }
     }
   }
-  if (current) orders.push(current);
-  return orders;
-}
 
-// ===========================================================================
-// STEP 3: clasificar lineas de papaya
-// ===========================================================================
-function classifyPapayaLine(desc) {
-  if (!desc.toLowerCase().startsWith("papaya")) return [null, null, null];
-
-  if (desc.toLowerCase().includes("maradol") && desc.toLowerCase().includes("heb")) {
-    return ["heb", null, null];
+  function sonarAlerta(){
+    try{
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [880, 660].forEach(function(freq, i){
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime + i*0.22);
+        gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + i*0.22 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i*0.22 + 0.2);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + i*0.22);
+        osc.stop(ctx.currentTime + i*0.22 + 0.22);
+      });
+    }catch(e){ /* audio no disponible, se ignora */ }
   }
 
-  let m = desc.match(/(\d+)\s*Count/i);
-  if ((desc.includes("38 Lb") || desc.includes("40 Lbs")) && m) {
-    return ["literal", `${m[1]} COUNT`, null];
-  }
+  function crearFilaMuestra(numero){
+    var wrap = document.createElement("div");
+    wrap.className = "muestra-block";
+    wrap.dataset.muestra = numero;
+    wrap.innerHTML =
+      '<div class="m-title">Muestra ' + numero + '</div>' +
+      '<div class="indicador-group">' +
+        '<div class="indicador" data-tipo="secuencia">' +
+          '<div class="ind-label">Secuencia</div>' +
+          '<div class="toggle-pair">' +
+            '<button type="button" class="toggle-btn ok" data-val="OK">OK</button>' +
+            '<button type="button" class="toggle-btn bad" data-val="No OK">No OK</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="indicador" data-tipo="concordancia">' +
+          '<div class="ind-label">Concordancia</div>' +
+          '<div class="toggle-pair">' +
+            '<button type="button" class="toggle-btn ok" data-val="OK">OK</button>' +
+            '<button type="button" class="toggle-btn bad" data-val="No OK">No OK</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="obs-field">' +
+        '<textarea placeholder="¿Qué se observó? (ej: secuencia invertida, etiqueta no coincide con el producto...)"></textarea>' +
+      '</div>';
 
-  if (/32\s*Lb/i.test(desc) && !/\d+\s*Count/i.test(desc)) {
-    return ["nocode", null, null];
-  }
-
-  let color = null;
-  if (/\b1\/2\b/.test(desc)) color = "½";
-  else if (/\b3\/4\b/.test(desc)) color = "¾";
-  else if (/\bA\b/.test(desc)) color = "A";
-
-  const sizeM = desc.match(/(\d+)\s*Count/i);
-  const size = sizeM ? sizeM[1] : null;
-
-  if (color && size) return ["color_size", color, size];
-  if (color && !size) return ["nocode_color", color, null];
-  return [null, null, null];
-}
-
-// ===========================================================================
-// STEP 4: acortar nombres de cliente
-// ===========================================================================
-function shortenClientName(rawName, note) {
-  let name = rawName.trim();
-
-  if (name.toLowerCase() === "ibarra") {
-    if (note) {
-      const m = note.match(/^([A-Za-z&.\s']+)/);
-      let sub = (m ? m[1] : note).trim().replace(/-$/, "").trim();
-      return sub === sub.toUpperCase() ? titleCase(sub) : sub;
-    }
-    return name;
-  }
-
-  let m = name.match(/^([A-Z][A-Za-z .]*?),?\s*([A-Z]{2})\s+(GROC|FDC|MDC)\b/);
-  if (m) return `${titleCase(m[1].trim())} ${m[2].trim()}`;
-
-  let m3 = name.match(/^([A-Za-z'.\s]+?)\s+(?:DC\s+)?\d{3,5}$/);
-  if (m3 && name.split(" ")[0].toLowerCase() !== "all") {
-    return m3[1].trim();
-  }
-
-  let cleaned = name;
-  for (const pat of NAME_STRIP_PATTERNS) cleaned = cleaned.replace(pat, "").trim().replace(/,$/, "").trim();
-  for (const [pat, repl] of REDUNDANT_WORD_STRIPS) cleaned = cleaned.replace(pat, repl).trim();
-  cleaned = cleaned.replace(/\s{2,}/g, " ").trim().replace(/,$/, "").trim();
-
-  if (NAME_OVERRIDES[cleaned.toLowerCase()]) return NAME_OVERRIDES[cleaned.toLowerCase()];
-  return cleaned;
-}
-
-function titleCase(s) {
-  return s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function divisorFor(clientKey, isHeb) {
-  if (isHeb) return HEB_DIVISOR;
-  if (SAMS_DIVISOR_CLIENTS.has(clientKey)) return SAMS_DIVISOR;
-  return STANDARD_DIVISOR;
-}
-
-// ===========================================================================
-// STEP 5: construir filas del reporte
-// ===========================================================================
-function buildReportRows(orders) {
-  const parsed = [];
-  for (const o of orders) {
-    const papayaTypes = new Map();
-    let hasPapaya = false;
-    for (const [qty, desc] of o.products) {
-      const [kind, a, b] = classifyPapayaLine(desc);
-      if (kind === null || qty === null) continue;
-      hasPapaya = true;
-      let key;
-      if (kind === "color_size") key = `color_size|${a}|${b}`;
-      else if (kind === "literal") key = `literal|${a}`;
-      else if (kind === "heb") key = "heb";
-      else if (kind === "nocode") key = "nocode";
-      else if (kind === "nocode_color") key = `nocode_color|${a}`;
-      papayaTypes.set(key, (papayaTypes.get(key) || 0) + qty);
-    }
-    if (!hasPapaya) continue;
-    const shortName = shortenClientName(o.name, o.note);
-    parsed.push({ sp: o.sp, cliente_full: o.name, cliente_corto: shortName, note: o.note, papaya_types: papayaTypes });
-  }
-
-  // agrupar por nombre corto: combinar (sin nota) o aclarar (notas distintas)
-  const groups = new Map();
-  for (const p of parsed) {
-    if (!groups.has(p.cliente_corto)) groups.set(p.cliente_corto, []);
-    groups.get(p.cliente_corto).push(p);
-  }
-
-  const entries = [];
-  for (const [name, group] of groups.entries()) {
-    if (group.length === 1) {
-      const g = group[0];
-      entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: name, papaya_types: g.papaya_types });
-      continue;
-    }
-    const distinctNotes = new Set(group.filter(g => g.note).map(g => g.note));
-    if (distinctNotes.size === group.length) {
-      for (const g of group) {
-        const clarifier = g.note ? titleCase(g.note.split(" ")[0]) : g.sp;
-        entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: `${name} (${clarifier})`, papaya_types: g.papaya_types });
-      }
-    } else {
-      const combined = new Map();
-      const sps = [];
-      for (const g of group) {
-        sps.push(g.sp);
-        for (const [k, v] of g.papaya_types.entries()) combined.set(k, (combined.get(k) || 0) + v);
-      }
-      entries.push({ sp: sps.join(" + "), cliente_full: group[0].cliente_full, cliente_corto: name, papaya_types: combined });
-    }
-  }
-
-  const rows = [], flags = [];
-  for (const e of entries) {
-    const papayaTypes = e.papaya_types;
-    const clientKey = e.cliente_corto.toLowerCase();
-    const isHeb = [...papayaTypes.keys()].some(k => k === "heb");
-    const divisor = divisorFor(clientKey, isHeb);
-
-    let totalBoxes = 0;
-    for (const v of papayaTypes.values()) totalBoxes += v;
-    const multiType = [...papayaTypes.values()].filter(v => v > 0).length > 1;
-
-    const codeParts = [];
-    for (const [key, boxes] of papayaTypes.entries()) {
-      const pallets_this = Math.floor(boxes / divisor);
-      let label;
-      const parts = key.split("|");
-      if (parts[0] === "color_size") label = `${parts[1]}-${parts[2]}`;
-      else if (parts[0] === "literal") label = parts[1];
-      else if (parts[0] === "heb" || parts[0] === "nocode") label = "¾-";
-      else if (parts[0] === "nocode_color") label = `${parts[1]}-`;
-      else label = "?";
-      if (multiType && parts[0] !== "literal" && parts[0] !== "heb") {
-        codeParts.push(`${pallets_this}-${label}`);
-      } else {
-        codeParts.push(label);
-      }
-    }
-
-    let code = codeParts.join(" ");
-    const totalPallets = Math.floor(totalBoxes / divisor);
-    const remainder = totalBoxes % divisor;
-
-    let palletsDisplay;
-    if (remainder) {
-      palletsDisplay = `${totalPallets} (${remainder} BXS)`;
-      if (!multiType) code = `${code} (${remainder} BXS)`;
-    } else {
-      palletsDisplay = String(totalPallets);
-    }
-
-    rows.push({
-      sp: e.sp, cliente_full: e.cliente_full, cliente_corto: e.cliente_corto,
-      pallets: palletsDisplay, pallets_num: totalPallets, remainder, codigo: code, total_boxes: totalBoxes
+    wrap.querySelectorAll(".indicador").forEach(function(ind){
+      var botones = ind.querySelectorAll(".toggle-btn");
+      botones.forEach(function(btn){
+        btn.addEventListener("click", function(){
+          botones.forEach(function(b){ b.classList.remove("selected"); });
+          btn.classList.add("selected");
+          actualizarObservacionVisible(wrap);
+          modalError.style.display = "none";
+        });
+      });
     });
 
-    if (remainder && totalPallets === 0) {
-      flags.push(`${e.cliente_corto} (${e.sp}): ${totalBoxes} cajas no llegan a 1 pallet completo — revisar.`);
+    return wrap;
+  }
+
+  function actualizarObservacionVisible(wrap){
+    var hayNoOk = Array.prototype.some.call(
+      wrap.querySelectorAll(".toggle-btn.bad"),
+      function(b){ return b.classList.contains("selected"); }
+    );
+    var obs = wrap.querySelector(".obs-field");
+    if (hayNoOk){ obs.classList.add("show"); }
+  }
+
+  function abrirModal(claveHora, esAutomatico){
+    modalAbierto = true;
+    minutosPospuestos = 0;
+    modalTitle.textContent = "Ronda de las " + claveHora;
+    document.getElementById("modalSub").textContent =
+      "Revisa las 4 muestras y marca Secuencia y Concordancia para cada una.";
+    modalRows.innerHTML = "";
+    for (var i = 1; i <= 4; i++){
+      modalRows.appendChild(crearFilaMuestra(i));
+    }
+    modalError.style.display = "none";
+    overlay.classList.remove("hidden");
+    overlay.dataset.hora = claveHora;
+    if (esAutomatico){
+      overlay.classList.add("auto");
+      sonarAlerta();
+    } else {
+      overlay.classList.remove("auto");
     }
   }
-  return [rows, flags];
-}
 
-// ===========================================================================
-// Generador de .docx propio (sin librerias externas) - construye el ZIP a mano
-// ===========================================================================
-function crc32(bytes) {
-  let table = crc32.table;
-  if (!table) {
-    table = crc32.table = new Uint32Array(256);
-    for (let n = 0; n < 256; n++) {
-      let c = n;
-      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-      table[n] = c >>> 0;
-    }
-  }
-  let crc = 0xFFFFFFFF;
-  for (let i = 0; i < bytes.length; i++) crc = table[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
-  return (crc ^ 0xFFFFFFFF) >>> 0;
-}
-
-function buildZip(files) {
-  const localParts = [], centralParts = [];
-  let offset = 0;
-  const dosTime = 0, dosDate = 0x21;
-  const enc = new TextEncoder();
-
-  for (const f of files) {
-    const nameBytes = enc.encode(f.name);
-    const data = f.content;
-    const crc = crc32(data);
-    const size = data.length;
-
-    const localHeader = new ArrayBuffer(30);
-    const lv = new DataView(localHeader);
-    lv.setUint32(0, 0x04034b50, true);
-    lv.setUint16(4, 20, true);
-    lv.setUint16(6, 0, true);
-    lv.setUint16(8, 0, true);
-    lv.setUint16(10, dosTime, true);
-    lv.setUint16(12, dosDate, true);
-    lv.setUint32(14, crc, true);
-    lv.setUint32(18, size, true);
-    lv.setUint32(22, size, true);
-    lv.setUint16(26, nameBytes.length, true);
-    lv.setUint16(28, 0, true);
-    localParts.push(new Uint8Array(localHeader), nameBytes, data);
-
-    const centralHeader = new ArrayBuffer(46);
-    const cv = new DataView(centralHeader);
-    cv.setUint32(0, 0x02014b50, true);
-    cv.setUint16(4, 20, true);
-    cv.setUint16(6, 20, true);
-    cv.setUint16(8, 0, true);
-    cv.setUint16(10, 0, true);
-    cv.setUint16(12, dosTime, true);
-    cv.setUint16(14, dosDate, true);
-    cv.setUint32(16, crc, true);
-    cv.setUint32(20, size, true);
-    cv.setUint32(24, size, true);
-    cv.setUint16(28, nameBytes.length, true);
-    cv.setUint16(30, 0, true);
-    cv.setUint16(32, 0, true);
-    cv.setUint16(34, 0, true);
-    cv.setUint16(36, 0, true);
-    cv.setUint32(38, 0, true);
-    cv.setUint32(42, offset, true);
-    centralParts.push(new Uint8Array(centralHeader), nameBytes);
-
-    offset += localHeader.byteLength + nameBytes.length + data.length;
+  function cerrarModal(){
+    modalAbierto = false;
+    overlay.classList.add("hidden");
   }
 
-  const centralStart = offset;
-  let centralSize = 0;
-  for (const p of centralParts) centralSize += p.length;
-
-  const eocd = new ArrayBuffer(22);
-  const ev = new DataView(eocd);
-  ev.setUint32(0, 0x06054b50, true);
-  ev.setUint16(8, files.length, true);
-  ev.setUint16(10, files.length, true);
-  ev.setUint32(12, centralSize, true);
-  ev.setUint32(16, centralStart, true);
-
-  const allParts = [...localParts, ...centralParts, new Uint8Array(eocd)];
-  let totalLen = 0;
-  for (const p of allParts) totalLen += p.length;
-  const out = new Uint8Array(totalLen);
-  let pos = 0;
-  for (const p of allParts) { out.set(p, pos); pos += p.length; }
-  return out;
-}
-
-const DOCX_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>
-<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
-</Types>`;
-
-const DOCX_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`;
-
-const DOCX_DOC_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
-</Relationships>`;
-
-const DOCX_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/></w:rPr></w:rPrDefault></w:docDefaults>
-<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
-</w:styles>`;
-
-const DOCX_NUMBERING = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:abstractNum w:abstractNumId="0">
-<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="&#9679;"/><w:lvlJc w:val="left"/>
-<w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>
-<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:hint="default"/></w:rPr></w:lvl>
-</w:abstractNum>
-<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>
-</w:numbering>`;
-
-function xmlEsc(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-function docxRun(text, size) {
-  return `<w:r><w:rPr><w:b/><w:i/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="${size || 20}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r>`;
-}
-function docxTab() {
-  return `<w:r><w:rPr><w:b/><w:i/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/></w:rPr><w:tab/></w:r>`;
-}
-function docxBulletParagraph(pallets, cliente, codigo) {
-  return `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>` +
-    `<w:tabs><w:tab w:val="left" w:pos="2300"/><w:tab w:val="left" w:pos="5100"/></w:tabs>` +
-    `<w:spacing w:after="60"/></w:pPr>` +
-    docxRun(pallets) + docxTab() + docxRun(cliente) + docxTab() + docxRun(codigo) + `</w:p>`;
-}
-function docxTitleParagraph(text) {
-  return `<w:p><w:pPr><w:spacing w:after="200"/></w:pPr>` +
-    `<w:r><w:rPr><w:b/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/></w:rPr>` +
-    `<w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p>`;
-}
-
-function buildDocxBlob(title, rows) {
-  let body = docxTitleParagraph(title);
-  for (const r of rows) body += docxBulletParagraph(r.pallets, r.cliente_corto, r.codigo);
-  body += `<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="900" w:bottom="900" w:left="900" w:right="900"/></w:sectPr>`;
-  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-    `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`;
-
-  const enc = new TextEncoder();
-  const files = [
-    { name: "[Content_Types].xml", content: enc.encode(DOCX_CONTENT_TYPES) },
-    { name: "_rels/.rels", content: enc.encode(DOCX_RELS) },
-    { name: "word/_rels/document.xml.rels", content: enc.encode(DOCX_DOC_RELS) },
-    { name: "word/styles.xml", content: enc.encode(DOCX_STYLES) },
-    { name: "word/numbering.xml", content: enc.encode(DOCX_NUMBERING) },
-    { name: "word/document.xml", content: enc.encode(documentXml) },
-  ];
-  const zipBytes = buildZip(files);
-  return new Blob([zipBytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-}
-
-// ===========================================================================
-// Generador de .xlsx propio con estilos (titulo azul, encabezados, filas alternadas)
-// ===========================================================================
-const XLSX_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>
-<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-</Types>`;
-
-const XLSX_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>`;
-
-const XLSX_WORKBOOK = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<sheets><sheet name="Papaya" sheetId="1" r:id="rId1"/></sheets>
-</workbook>`;
-
-const XLSX_WORKBOOK_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`;
-
-const XLSX_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<fonts count="4">
-<font><sz val="11"/><name val="Arial"/></font>
-<font><b/><sz val="14"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>
-<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>
-<font><b/><sz val="11"/><name val="Arial"/></font>
-</fonts>
-<fills count="5">
-<fill><patternFill patternType="none"/></fill>
-<fill><patternFill patternType="gray125"/></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FF1F3864"/><bgColor indexed="64"/></patternFill></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FF2E5395"/><bgColor indexed="64"/></patternFill></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FFD9E2F3"/><bgColor indexed="64"/></patternFill></fill>
-</fills>
-<borders count="2">
-<border><left/><right/><top/><bottom/><diagonal/></border>
-<border><left style="thin"><color rgb="FFAAAAAA"/></left><right style="thin"><color rgb="FFAAAAAA"/></right><top style="thin"><color rgb="FFAAAAAA"/></top><bottom style="thin"><color rgb="FFAAAAAA"/></bottom><diagonal/></border>
-</borders>
-<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="8">
-<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
-<xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
-<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
-<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/>
-<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>
-<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
-<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
-</cellXfs>
-</styleSheet>`;
-
-function xlsxColLetter(n) {
-  let s = "";
-  while (n > 0) {
-    const r = (n - 1) % 26;
-    s = String.fromCharCode(65 + r) + s;
-    n = Math.floor((n - 1) / 26);
-  }
-  return s;
-}
-function xlsxEsc(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-function xlsxCell(col, row, value, style, isNum) {
-  const ref = `${xlsxColLetter(col)}${row}`;
-  const s = style || 0;
-  if (isNum) return `<c r="${ref}" s="${s}"><v>${value}</v></c>`;
-  return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xlsxEsc(value)}</t></is></c>`;
-}
-
-function buildXlsxBlob(title, rows, flags) {
-  const rowsXml = [];
-  rowsXml.push(`<row r="1">${xlsxCell(1, 1, title, 1)}</row>`);
-  const headers = ["#", "PALLETS", "CLIENTE", "COLOR Y TAMAÑO"];
-  rowsXml.push(`<row r="3">${headers.map((h, i) => xlsxCell(i + 1, 3, h, 2)).join("")}</row>`);
-
-  let r = 4, total = 0;
-  rows.forEach((row, i) => {
-    const idx = i + 1;
-    const baseStyle = (idx % 2 === 0) ? 4 : 3;
-    const palletsStyle = (idx % 2 === 0) ? 7 : 6;
-    const cells = xlsxCell(1, r, idx, baseStyle, true) +
-      xlsxCell(2, r, row.pallets, palletsStyle) +
-      xlsxCell(3, r, row.cliente_corto, baseStyle) +
-      xlsxCell(4, r, row.codigo, baseStyle);
-    rowsXml.push(`<row r="${r}">${cells}</row>`);
-    total += row.pallets_num;
-    r++;
+  document.getElementById("manualBtn").addEventListener("click", function(){
+    var now = new Date();
+    abrirModal(claveRonda(now), false);
   });
 
-  const totalCells = xlsxCell(1, r, "TOTAL", 5) + xlsxCell(2, r, total, 6, true) + xlsxCell(3, r, "", 3) + xlsxCell(4, r, "", 3);
-  rowsXml.push(`<row r="${r}">${totalCells}</row>`);
-  r += 2;
-
-  if (flags && flags.length) {
-    rowsXml.push(`<row r="${r}">${xlsxCell(1, r, "REVISAR:", 5)}</row>`);
-    r++;
-    for (const f of flags) {
-      rowsXml.push(`<row r="${r}">${xlsxCell(1, r, "- " + f, 0)}</row>`);
-      r++;
-    }
-  }
-
-  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-    `<cols><col min="1" max="1" width="6" customWidth="1"/>` +
-    `<col min="2" max="2" width="16" customWidth="1"/>` +
-    `<col min="3" max="3" width="32" customWidth="1"/>` +
-    `<col min="4" max="4" width="42" customWidth="1"/></cols>` +
-    `<sheetData>${rowsXml.join("")}</sheetData>` +
-    `<mergeCells count="1"><mergeCell ref="A1:D1"/></mergeCells>` +
-    `</worksheet>`;
-
-  const enc = new TextEncoder();
-  const files = [
-    { name: "[Content_Types].xml", content: enc.encode(XLSX_CONTENT_TYPES) },
-    { name: "_rels/.rels", content: enc.encode(XLSX_RELS) },
-    { name: "xl/workbook.xml", content: enc.encode(XLSX_WORKBOOK) },
-    { name: "xl/_rels/workbook.xml.rels", content: enc.encode(XLSX_WORKBOOK_RELS) },
-    { name: "xl/styles.xml", content: enc.encode(XLSX_STYLES) },
-    { name: "xl/worksheets/sheet1.xml", content: enc.encode(sheetXml) },
-  ];
-  const zipBytes = buildZip(files);
-  return new Blob([zipBytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-}
-
-// ===========================================================================
-// UI
-// ===========================================================================
-const dropzone = document.getElementById("dropzone");
-const fileInput = document.getElementById("fileInput");
-const statusEl = document.getElementById("status");
-const resultsCard = document.getElementById("resultsCard");
-const summaryEl = document.getElementById("summary");
-const flagsEl = document.getElementById("flags");
-const tbody = document.querySelector("#resultsTable tbody");
-const downloadExcelBtn = document.getElementById("downloadExcelBtn");
-const downloadWordBtn = document.getElementById("downloadWordBtn");
-const showSheetsBtn = document.getElementById("showSheetsBtn");
-const sheetsBox = document.getElementById("sheetsBox");
-const sheetsText = document.getElementById("sheetsText");
-const copySheetsBtn = document.getElementById("copySheetsBtn");
-const copyStatus = document.getElementById("copyStatus");
-const resetBtn = document.getElementById("resetBtn");
-
-let lastRows = [], lastFlags = [], lastFileName = "reporte";
-
-dropzone.addEventListener("click", () => fileInput.click());
-dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("drag"); });
-dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag"));
-dropzone.addEventListener("drop", e => {
-  e.preventDefault();
-  dropzone.classList.remove("drag");
-  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener("change", () => {
-  if (fileInput.files.length) handleFile(fileInput.files[0]);
-});
-resetBtn.addEventListener("click", () => {
-  resultsCard.classList.add("hidden");
-  sheetsBox.classList.add("hidden");
-  statusEl.textContent = "";
-  fileInput.value = "";
-});
-
-async function handleFile(file) {
-  if (file.type !== "application/pdf") {
-    statusEl.textContent = "Ese archivo no es un PDF.";
-    return;
-  }
-  if (typeof pdfjsLib === "undefined") {
-    statusEl.textContent = "No se pudo cargar la librería para leer PDFs (revisa tu conexión a internet y recarga la página).";
-    return;
-  }
-  lastFileName = file.name.replace(/\.pdf$/i, "");
-  statusEl.textContent = "Leyendo PDF...";
-  resultsCard.classList.add("hidden");
-  sheetsBox.classList.add("hidden");
-  try {
-    const buf = await file.arrayBuffer();
-    const lines = await extractLines(buf);
-    const orders = parseOrders(lines);
-    const [rows, flags] = buildReportRows(orders);
-    if (!rows.length) {
-      statusEl.textContent = "No se encontraron líneas de papaya en este PDF.";
+  document.getElementById("posponerBtn").addEventListener("click", function(){
+    minutosPospuestos += 2;
+    if (minutosPospuestos > 10){
+      mostrarToast("Ya se pospuso varias veces — intenta guardar el registro.");
       return;
     }
-    lastRows = rows; lastFlags = flags;
-    renderResults(rows, flags);
-    statusEl.textContent = "Listo.";
-  } catch (err) {
-    console.error(err);
-    statusEl.textContent = "Error al procesar el PDF: " + err.message;
-  }
-}
-
-function renderResults(rows, flags) {
-  const total = rows.reduce((s, r) => s + r.pallets_num, 0);
-  summaryEl.innerHTML = `<b>${rows.length}</b> órdenes con papaya &nbsp;·&nbsp; <b>${total}</b> pallets totales`;
-
-  tbody.innerHTML = "";
-  rows.forEach((r, i) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${i + 1}</td><td class="pallets-col">${r.pallets}</td><td>${r.cliente_corto}</td><td>${r.codigo}</td>`;
-    tbody.appendChild(tr);
+    var clave = overlay.dataset.hora;
+    cerrarModal();
+    setTimeout(function(){
+      abrirModal(clave, true);
+    }, 2 * 60 * 1000);
+    mostrarToast("Se recordará en 2 minutos.");
   });
 
-  flagsEl.innerHTML = "";
-  if (flags.length) {
-    const title = document.createElement("div");
-    title.innerHTML = "<b style='color:var(--red)'>REVISAR:</b>";
-    flagsEl.appendChild(title);
-    flags.forEach(f => {
-      const d = document.createElement("div");
-      d.className = "flag";
-      d.textContent = "- " + f;
-      flagsEl.appendChild(d);
+  document.getElementById("guardarBtn").addEventListener("click", function(){
+    var bloques = modalRows.querySelectorAll(".muestra-block");
+    var registros = [];
+    var incompleto = false;
+
+    bloques.forEach(function(b){
+      var secSel = b.querySelector('[data-tipo="secuencia"] .toggle-btn.selected');
+      var conSel = b.querySelector('[data-tipo="concordancia"] .toggle-btn.selected');
+      if (!secSel || !conSel){
+        incompleto = true;
+        return;
+      }
+      registros.push({
+        muestra: b.dataset.muestra,
+        secuencia: secSel.dataset.val,
+        concordancia: conSel.dataset.val,
+        observacion: b.querySelector("textarea").value.trim()
+      });
+    });
+
+    if (incompleto){
+      modalError.style.display = "block";
+      return;
+    }
+
+    var claveHora = overlay.dataset.hora;
+    var inspector = document.getElementById("inspectorName").value.trim();
+    var ahora = new Date();
+
+    registros.forEach(function(r){
+      var registro = {
+        horaRonda: claveHora,
+        muestra: r.muestra,
+        secuencia: r.secuencia,
+        concordancia: r.concordancia,
+        observacion: r.observacion,
+        inspector: inspector,
+        fecha: ahora.toISOString().slice(0,10),
+        timestamp: ahora.toISOString()
+      };
+      historial.unshift(registro);
+    });
+
+    rondasRegistradas.add(claveHora);
+    renderHistorial();
+    enviarAGoogleSheets(claveHora, inspector, registros, ahora);
+    cerrarModal();
+    mostrarToast("Registro guardado (" + claveHora + ").");
+  });
+
+  function renderHistorial(){
+    historialBody.innerHTML = "";
+    historialVacio.style.display = historial.length ? "none" : "block";
+    contadorEl.textContent = rondasRegistradas.size;
+
+    historial.forEach(function(r){
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + r.horaRonda + "</td>" +
+        "<td>Muestra " + r.muestra + "</td>" +
+        "<td>" + badge(r.secuencia) + "</td>" +
+        "<td>" + badge(r.concordancia) + "</td>" +
+        "<td>" + (r.observacion || "—") + "</td>";
+      historialBody.appendChild(tr);
     });
   }
 
-  resultsCard.classList.remove("hidden");
-}
-
-downloadExcelBtn.addEventListener("click", () => {
-  const blob = buildXlsxBlob(`CHULA BRAND - PAPAYA REPORT ${lastFileName}`, lastRows, lastFlags);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `Papaya_Report_${lastFileName}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-downloadWordBtn.addEventListener("click", () => {
-  const blob = buildDocxBlob(`CHULA BRAND - PAPAYA REPORT ${lastFileName}`, lastRows);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `Papaya_Report_${lastFileName}.docx`;
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-showSheetsBtn.addEventListener("click", () => {
-  const lines = lastRows.map(r => `${r.pallets}\t${r.cliente_corto}\t${r.codigo}`);
-  sheetsText.value = lines.join("\n");
-  sheetsBox.classList.remove("hidden");
-  copyStatus.textContent = "";
-});
-
-copySheetsBtn.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(sheetsText.value);
-    copyStatus.textContent = "¡Copiado!";
-  } catch {
-    sheetsText.select();
-    document.execCommand("copy");
-    copyStatus.textContent = "¡Copiado!";
+  function badge(valor){
+    var ok = valor === "OK";
+    return '<span class="badge ' + (ok ? "badge-ok" : "badge-bad") + '">' +
+      '<span class="badge-dot"></span>' + valor + '</span>';
   }
-});
+
+  function mostrarToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(function(){ toastEl.classList.remove("show"); }, 2600);
+  }
+
+  function enviarAGoogleSheets(claveHora, inspector, registros, ahora){
+    var url = document.getElementById("sheetsUrl").value.trim();
+    if (!url) return;
+    var payload = {
+      fecha: ahora.toISOString().slice(0,10),
+      horaRonda: claveHora,
+      inspector: inspector,
+      registros: registros
+    };
+    fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).catch(function(){
+      mostrarToast("No se pudo contactar Google Sheets (se guardó localmente).");
+    });
+  }
+
+  document.getElementById("testConnBtn").addEventListener("click", function(){
+    var url = document.getElementById("sheetsUrl").value.trim();
+    if (!url){
+      estadoConexionEl.textContent = "Pega primero la URL del Web App.";
+      return;
+    }
+    var ahora = new Date();
+    var registrosPrueba = [{
+      muestra: "PRUEBA",
+      secuencia: "OK",
+      concordancia: "OK",
+      observacion: "Registro de prueba de conexión"
+    }];
+    enviarAGoogleSheets(pad(ahora.getHours()) + ":" + pad(ahora.getMinutes()), "prueba", registrosPrueba, ahora);
+    estadoConexionEl.textContent = "Se envió un registro de prueba. Revisa tu hoja de Google Sheets para confirmar que llegó.";
+  });
+
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    if (!historial.length){
+      mostrarToast("Todavía no hay registros para exportar.");
+      return;
+    }
+    var encabezado = ["Fecha","Hora ronda","Muestra","Secuencia","Concordancia","Observacion","Inspector"];
+    var filas = historial.map(function(r){
+      return [r.fecha, r.horaRonda, "Muestra " + r.muestra, r.secuencia, r.concordancia, r.observacion, r.inspector]
+        .map(function(v){ return '"' + String(v || "").replace(/"/g,'""') + '"'; })
+        .join(",");
+    });
+    var csv = encabezado.join(",") + "\n" + filas.join("\n");
+    var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "inspeccion_calidad_" + new Date().toISOString().slice(0,10) + ".csv";
+    link.click();
+  });
+
+  renderHistorial();
+  actualizarReloj();
+  setInterval(actualizarReloj, 1000);
+})();
 </script>
+
 </body>
 </html>
