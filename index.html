@@ -460,14 +460,11 @@
   <div class="card">
     <h2>Conexión con Google Sheets</h2>
     <p class="footer-note" style="margin-bottom:12px;">
-      Esta es la dirección donde se guardan permanentemente los registros. Ya viene configurada; normalmente no necesitas tocarla. Usa "Enviar registro de prueba" para confirmar que está funcionando.
+      Esta es la dirección donde se guardan permanentemente los registros. Ya viene configurada; normalmente no necesitas tocarla. Cada vez que registras una ronda con "Guardar registro", se envía directo a esta hoja.
     </p>
     <div class="field">
       <label for="sheetsUrl">URL del Web App de Google Sheets</label>
       <input id="sheetsUrl" type="text" value="https://script.google.com/macros/s/AKfycbyHf5fvYuOn8Ti4hcRHr0sxMFAx28AMWPpgbhacQlpRvAxQPM0hfCaZCGB6OWYSp-B-ng/exec" placeholder="Pega aquí la URL que te da Google Apps Script">
-    </div>
-    <div class="btn-row">
-      <button class="btn-secondary" id="testConnBtn">Enviar registro de prueba</button>
     </div>
     <div id="estadoConexion"></div>
   </div>
@@ -879,7 +876,10 @@
 
   function enviarAGoogleSheets(claveHora, inspector, registros, ahora){
     var url = document.getElementById("sheetsUrl").value.trim();
-    if (!url) return;
+    if (!url){
+      estadoConexionEl.textContent = "No hay URL configurada: este registro NO se envió a Google Sheets.";
+      return;
+    }
     var payload = {
       fecha: ahora.toISOString().slice(0,10),
       horaRonda: claveHora,
@@ -891,27 +891,15 @@
       mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
+    }).then(function(){
+      estadoConexionEl.textContent = "Último envío a Google Sheets: " + claveHora + " (" +
+        pad(new Date().getHours()) + ":" + pad(new Date().getMinutes()) + ":" + pad(new Date().getSeconds()) +
+        "). Nota: por restricciones del navegador no podemos confirmar aquí si Google lo aceptó — revisa la hoja.";
     }).catch(function(){
+      estadoConexionEl.textContent = "No se pudo contactar Google Sheets (revisa la URL o tu conexión). El registro solo quedó guardado localmente.";
       mostrarToast("No se pudo contactar Google Sheets (se guardó localmente).");
     });
   }
-
-  document.getElementById("testConnBtn").addEventListener("click", function(){
-    var url = document.getElementById("sheetsUrl").value.trim();
-    if (!url){
-      estadoConexionEl.textContent = "Pega primero la URL del Web App.";
-      return;
-    }
-    var ahora = new Date();
-    var registrosPrueba = [{
-      muestra: "PRUEBA",
-      secuencia: "OK",
-      concordancia: "OK",
-      observacion: "Registro de prueba de conexión"
-    }];
-    enviarAGoogleSheets(pad(ahora.getHours()) + ":" + pad(ahora.getMinutes()), "prueba", registrosPrueba, ahora);
-    estadoConexionEl.textContent = "Se envió un registro de prueba. Revisa tu hoja de Google Sheets para confirmar que llegó.";
-  });
 
   document.getElementById("exportBtn").addEventListener("click", function(){
     if (!historial.length){
