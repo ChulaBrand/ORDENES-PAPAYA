@@ -464,6 +464,13 @@
   }
   .turno-hint:hover:not(:disabled){ background:var(--ok); color:#fff; }
   .turno-hint:disabled{ cursor:default; }
+  .ronda-completada-hint{
+    color:var(--ok);
+    font-size:13px;
+    font-weight:600;
+    text-align:center;
+    margin-bottom:10px;
+  }
   .back-btn{
     background:transparent;
     border:none;
@@ -837,7 +844,7 @@
       </div>
       <h2>¿Quién va a llenar esta ronda?</h2>
       <div class="sub">Toca tu nombre e ingresa tu PIN. Al terminar de registrar, vuelves aquí para que entre el siguiente.</div>
-      <div id="rondaCompletadaHint" class="turno-hint hidden" style="cursor:default;"></div>
+      <div id="rondaCompletadaHint" class="ronda-completada-hint hidden"></div>
       <button type="button" id="turnoHint" class="turno-hint hidden"></button>
       <div id="horarioEstado" class="horario-estado hidden"></div>
       <div id="listaUsuarios"></div>
@@ -969,6 +976,7 @@
   "use strict";
 
   var rondasRegistradas = new Set(); // claves "HH:MM" ya guardadas, para no duplicar
+  var rondaCompletadaPor = {}; // clave "HH:MM" -> nombre de quien la registro
   var ultimaClaveDisparada = null;
   var horaRondaActualValor = null;
 
@@ -1230,7 +1238,9 @@
     var actualRegistrada = rondasRegistradas.has(claveActual);
 
     if (actualRegistrada){
-      rondaCompletadaHintEl.textContent = "✓ Ronda de las " + claveActual + " ya registrada";
+      var quienRegistro = rondaCompletadaPor[claveActual];
+      rondaCompletadaHintEl.textContent = "✓ Ronda de las " + claveActual + " ya registrada" +
+        (quienRegistro ? " por " + quienRegistro : "");
       rondaCompletadaHintEl.classList.remove("hidden");
     } else {
       rondaCompletadaHintEl.classList.add("hidden");
@@ -1239,7 +1249,7 @@
     var claveParaTurno = actualRegistrada ? claveRonda(siguienteMarca(ahora)) : claveActual;
     var turno = turnoDeFranja(claveParaTurno);
     if (turno){
-      turnoHintEl.textContent = "Le toca a: " + turno;
+      turnoHintEl.textContent = "Le toca a " + turno + " · " + claveParaTurno;
       turnoHintEl.classList.remove("hidden");
       turnoHintEl.disabled = false;
       turnoHintEl.onclick = function(){ mostrarPinView(turno); };
@@ -1843,6 +1853,7 @@
     var horaReal = pad(ahora.getHours()) + ":" + pad(ahora.getMinutes()) + ":" + pad(ahora.getSeconds());
 
     rondasRegistradas.add(claveHora);
+    rondaCompletadaPor[claveHora] = inspector;
     renderHistorial();
     enviarAGoogleSheets(claveHora, inspector, registros, ahora, horaReal);
     mostrarToast("Enviado ✓ (" + claveHora + ")");
