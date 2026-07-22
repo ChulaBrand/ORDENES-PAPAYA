@@ -240,19 +240,7 @@
     padding:20px 0;
     text-align:center;
   }
-  /* Modal */
-  #modalOverlay{
-    position:fixed;
-    inset:0;
-    background:rgba(15,23,42,0.72);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:16px;
-    z-index:50;
-  }
   .hidden{ display:none; }
-  #modalOverlay.hidden{ display:none; }
   #loginOverlay{
     position:fixed;
     inset:0;
@@ -496,40 +484,13 @@
     font-size:13px;
     margin-bottom:4px;
   }
-  #modalCard{
-    background:var(--panel);
-    color:var(--text);
-    border-radius:16px;
-    max-width:760px;
-    width:100%;
-    max-height:92vh;
-    overflow-y:auto;
-    padding:26px;
-    animation:pop .18s ease-out;
-  }
-  @keyframes pop{
-    from{ transform:scale(.96); opacity:0; }
-    to{ transform:scale(1); opacity:1; }
-  }
-  #modalOverlay.auto #modalCard{
-    box-shadow:0 0 0 3px var(--accent), 0 20px 50px rgba(0,0,0,0.35);
-  }
-  #modalCard h2{
-    margin:0 0 2px;
-    font-size:19px;
-  }
-  #modalCard .sub{
-    color:var(--muted);
-    font-size:13px;
-    margin-bottom:18px;
-  }
-  #modalRows{
+  #rondaRows{
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:12px;
   }
   @media (max-width:640px){
-    #modalRows{ grid-template-columns:1fr; }
+    #rondaRows{ grid-template-columns:1fr; }
   }
   .muestra-block{
     border:1px solid var(--border);
@@ -604,18 +565,11 @@
     background:var(--panel-2);
     color:var(--text);
   }
-  #modalFooter{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    margin-top:16px;
-    flex-wrap:wrap;
-  }
-  #modalError{
+  #rondaError{
     color:var(--bad);
     font-size:13px;
     display:none;
+    margin-top:10px;
   }
   .toast{
     position:fixed;
@@ -678,6 +632,16 @@
   <input type="hidden" id="sheetsUrl" value="https://script.google.com/macros/s/AKfycbyHf5fvYuOn8Ti4hcRHr0sxMFAx28AMWPpgbhacQlpRvAxQPM0hfCaZCGB6OWYSp-B-ng/exec">
 
   <div class="card">
+    <h2 id="rondaTitulo">Ronda de las --:--</h2>
+    <div class="sub">Marca Secuencia y Concordancia para cada muestra. Guarda cuando termines.</div>
+    <div id="rondaRows"></div>
+    <div id="rondaError">Falta marcar Secuencia y/o Concordancia en alguna muestra.</div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn-primary" id="guardarBtn">Guardar registro</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Historial de rondas</h2>
     <table id="tablaHistorial">
       <thead>
@@ -692,28 +656,12 @@
       <tbody id="historialBody"></tbody>
     </table>
     <div class="empty" id="historialVacio">Todavía no hay registros en esta sesión.</div>
-    <div class="btn-row">
-      <button class="btn-primary" id="manualBtn">Registrar ronda ahora</button>
-    </div>
     <p class="footer-note">
       El historial de esta tabla vive mientras la página esté abierta (no se guarda al recargar). Lo que sí queda guardado de forma permanente es lo que se envía a Google Sheets.
     </p>
   </div>
 
 </main>
-
-<div id="modalOverlay" class="hidden">
-  <div id="modalCard">
-    <h2 id="modalTitle">Ronda de las --:--</h2>
-    <div class="sub" id="modalSub">Revisa las 4 muestras y marca Secuencia y Concordancia para cada una.</div>
-    <div id="modalRows"></div>
-    <div id="modalError">Falta marcar Secuencia y/o Concordancia en alguna muestra.</div>
-    <div id="modalFooter">
-      <button class="btn-secondary" id="posponerBtn">Posponer 2 min</button>
-      <button class="btn-primary" id="guardarBtn">Guardar registro</button>
-    </div>
-  </div>
-</div>
 
 <div id="loginOverlay" class="hidden">
   <div id="loginCard">
@@ -797,16 +745,14 @@
   var historial = [];          // {horaRonda, muestra, secuencia, concordancia, observacion, inspector, ts}
   var rondasRegistradas = new Set(); // claves "HH:MM" ya guardadas, para no duplicar
   var ultimaClaveDisparada = null;
-  var modalAbierto = false;
-  var minutosPospuestos = 0;
+  var horaRondaActualValor = null;
 
   var relojEl = document.getElementById("relojActual");
   var proximaEl = document.getElementById("proximaRonda");
   var contadorEl = document.getElementById("contadorRondas");
-  var overlay = document.getElementById("modalOverlay");
-  var modalTitle = document.getElementById("modalTitle");
-  var modalRows = document.getElementById("modalRows");
-  var modalError = document.getElementById("modalError");
+  var rondaTitulo = document.getElementById("rondaTitulo");
+  var rondaRows = document.getElementById("rondaRows");
+  var rondaError = document.getElementById("rondaError");
   var historialBody = document.getElementById("historialBody");
   var historialVacio = document.getElementById("historialVacio");
   var toastEl = document.getElementById("toast");
@@ -984,11 +930,9 @@
     detenerAlertaPendiente();
     fijarInspector(nombre);
     ocultarLogin();
-    if (rondaPendiente){
-      var clave = rondaPendiente;
-      rondaPendiente = null;
-      abrirModal(clave, true);
-    }
+    var clave = rondaPendiente || claveRondaMasReciente(new Date());
+    rondaPendiente = null;
+    iniciarRonda(clave);
   }
 
   function cerrarSesion(){
@@ -1173,8 +1117,14 @@
     verificarDisparo(now);
   }
 
+  function claveRondaMasReciente(d){
+    var floor = new Date(d);
+    var m = floor.getMinutes();
+    floor.setMinutes(m - (m % 15), 0, 0);
+    return claveRonda(floor);
+  }
+
   function verificarDisparo(now){
-    if (modalAbierto) return;
     var minuto = now.getMinutes();
     var segundo = now.getSeconds();
     if (minuto % 15 === 0 && segundo < 5){
@@ -1185,7 +1135,8 @@
           rondaPendiente = clave;
           iniciarAlertaPendiente();
         } else {
-          abrirModal(clave, true);
+          iniciarRonda(clave);
+          sonarAlerta();
         }
       }
     }
@@ -1243,7 +1194,7 @@
         btn.addEventListener("click", function(){
           botones.forEach(function(b){ b.classList.remove("selected"); });
           btn.classList.add("selected");
-          modalError.style.display = "none";
+          rondaError.style.display = "none";
         });
       });
     });
@@ -1251,57 +1202,18 @@
     return wrap;
   }
 
-  function abrirModal(claveHora, esAutomatico){
-    modalAbierto = true;
-    minutosPospuestos = 0;
-    modalTitle.textContent = "Ronda de las " + claveHora;
-    document.getElementById("modalSub").textContent =
-      "Revisa las 4 muestras y marca Secuencia y Concordancia para cada una.";
-    modalRows.innerHTML = "";
+  function iniciarRonda(claveHora){
+    horaRondaActualValor = claveHora;
+    rondaTitulo.textContent = "Ronda de las " + claveHora;
+    rondaRows.innerHTML = "";
     for (var i = 1; i <= 4; i++){
-      modalRows.appendChild(crearFilaMuestra(i));
+      rondaRows.appendChild(crearFilaMuestra(i));
     }
-    modalError.style.display = "none";
-    overlay.classList.remove("hidden");
-    overlay.dataset.hora = claveHora;
-    if (esAutomatico){
-      overlay.classList.add("auto");
-      sonarAlerta();
-    } else {
-      overlay.classList.remove("auto");
-    }
+    rondaError.style.display = "none";
   }
-
-  function cerrarModal(){
-    modalAbierto = false;
-    overlay.classList.add("hidden");
-  }
-
-  document.getElementById("manualBtn").addEventListener("click", function(){
-    if (!inspectorActual()){
-      mostrarLogin();
-      return;
-    }
-    var now = new Date();
-    abrirModal(claveRonda(now), false);
-  });
-
-  document.getElementById("posponerBtn").addEventListener("click", function(){
-    minutosPospuestos += 2;
-    if (minutosPospuestos > 10){
-      mostrarToast("Ya se pospuso varias veces — intenta guardar el registro.");
-      return;
-    }
-    var clave = overlay.dataset.hora;
-    cerrarModal();
-    setTimeout(function(){
-      abrirModal(clave, true);
-    }, 2 * 60 * 1000);
-    mostrarToast("Se recordará en 2 minutos.");
-  });
 
   document.getElementById("guardarBtn").addEventListener("click", function(){
-    var bloques = modalRows.querySelectorAll(".muestra-block");
+    var bloques = rondaRows.querySelectorAll(".muestra-block");
     var registros = [];
     var incompleto = false;
 
@@ -1321,18 +1233,17 @@
     });
 
     if (incompleto){
-      modalError.style.display = "block";
+      rondaError.style.display = "block";
       return;
     }
 
     var inspector = inspectorActual();
     if (!inspector){
-      cerrarModal();
       mostrarLogin();
       return;
     }
 
-    var claveHora = overlay.dataset.hora;
+    var claveHora = horaRondaActualValor;
     var ahora = new Date();
 
     registros.forEach(function(r){
@@ -1352,7 +1263,6 @@
     rondasRegistradas.add(claveHora);
     renderHistorial();
     enviarAGoogleSheets(claveHora, inspector, registros, ahora);
-    cerrarModal();
     mostrarToast("Enviado ✓ (" + claveHora + ")");
     cerrarSesion();
   });
