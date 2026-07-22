@@ -251,6 +251,7 @@
     padding:16px;
     z-index:50;
   }
+  .hidden{ display:none; }
   #modalOverlay.hidden{ display:none; }
   #loginOverlay{
     position:fixed;
@@ -273,44 +274,42 @@
     50%{ box-shadow:0 0 0 6px var(--bad), 0 20px 50px rgba(0,0,0,.35); }
   }
   #loginOverlay.alerta #loginCard{ animation:pulseBorde .9s ease-in-out infinite; }
-  .login-clock{
-    display:flex;
-    gap:12px;
-    margin-bottom:16px;
-    flex-wrap:wrap;
+  .login-clock-big{
+    text-align:center;
+    margin-bottom:24px;
+    padding-bottom:20px;
+    border-bottom:1px solid var(--border);
   }
-  .login-clock > div{
-    background:var(--panel-2);
-    border:1px solid var(--border);
-    border-radius:10px;
-    padding:8px 14px;
-    flex:1;
-    min-width:130px;
-  }
-  .login-clock-label{
-    display:block;
-    font-size:11px;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:.04em;
-  }
-  .login-clock-value{
-    display:block;
-    font-size:18px;
-    font-weight:700;
+  .login-clock-big-value{
+    font-size:58px;
+    font-weight:800;
     font-variant-numeric:tabular-nums;
     color:var(--accent-2);
+    line-height:1;
   }
-  .admin-link{
-    background:transparent;
-    border:none;
+  .login-clock-big-sub{
+    font-size:14px;
     color:var(--muted);
-    font-size:12px;
-    text-decoration:underline;
-    padding:6px 0;
-    margin-top:6px;
+    margin-top:8px;
   }
-  .admin-link:hover{ color:var(--accent); }
+  .admin-fab{
+    position:fixed;
+    bottom:14px;
+    right:14px;
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.12);
+    color:rgba(255,255,255,0.3);
+    font-size:15px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:65;
+    transition:background .15s,color .15s;
+  }
+  .admin-fab:hover{ background:rgba(255,255,255,0.18); color:rgba(255,255,255,0.85); }
   #adminOverlay{
     position:fixed;
     inset:0;
@@ -719,20 +718,13 @@
 <div id="loginOverlay" class="hidden">
   <div id="loginCard">
     <div id="loginListView">
+      <div class="login-clock-big">
+        <div class="login-clock-big-value" id="loginHoraActual">--:--:--</div>
+        <div class="login-clock-big-sub">Próxima ronda: <span id="loginProximaRonda">--:--</span></div>
+      </div>
       <h2>¿Quién va a llenar esta ronda?</h2>
       <div class="sub">Toca tu nombre e ingresa tu PIN. Al terminar de registrar, vuelves aquí para que entre el siguiente.</div>
-      <div class="login-clock">
-        <div>
-          <span class="login-clock-label">Hora actual</span>
-          <span class="login-clock-value" id="loginHoraActual">--:--:--</span>
-        </div>
-        <div>
-          <span class="login-clock-label">Próxima ronda</span>
-          <span class="login-clock-value" id="loginProximaRonda">--:--</span>
-        </div>
-      </div>
       <div id="listaUsuarios"></div>
-      <button type="button" class="admin-link" id="abrirAdminBtn">⚙ Administrar usuarios</button>
     </div>
     <div id="loginPinView" class="hidden">
       <h2>Hola, <span id="loginPinNombre">—</span></h2>
@@ -793,6 +785,8 @@
     </div>
   </div>
 </div>
+
+<button type="button" class="admin-fab" id="abrirAdminBtn" title="Administración" aria-label="Administración">⚙</button>
 
 <div class="toast" id="toast"></div>
 
