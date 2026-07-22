@@ -6,26 +6,51 @@
 <title>Inspección de Calidad — Registro cada 15 min</title>
 <style>
   :root{
-    --bg:#0f172a;
+    --header-1:#7a0a54;
+    --header-2:#b3005f;
+    --page-bg:#fdf2f8;
     --panel:#ffffff;
-    --panel-2:#f8fafc;
-    --border:#e2e8f0;
-    --text:#1e293b;
-    --muted:#64748b;
+    --panel-2:#fdf2f8;
+    --border:#f3d1e6;
+    --text:#2a1130;
+    --muted:#8a6280;
     --ok:#16a34a;
     --ok-bg:#dcfce7;
     --bad:#dc2626;
     --bad-bg:#fee2e2;
-    --accent:#2563eb;
-    --accent-dark:#1d4ed8;
+    --accent:#e6007e;
+    --accent-dark:#b3005f;
+    --accent-2:#00b6b6;
+    --accent-2-dark:#00888a;
+    --highlight:#ffcb05;
+  }
+  :root[data-theme="dark"]{
+    --header-1:#170b1f;
+    --header-2:#241130;
+    --page-bg:#170b1f;
+    --panel:#241130;
+    --panel-2:#2f1740;
+    --border:#4a2a58;
+    --text:#f5e6f0;
+    --muted:#c9a8c4;
+    --ok:#22c55e;
+    --ok-bg:#123322;
+    --bad:#f87171;
+    --bad-bg:#3a1414;
+    --accent:#ff2f9e;
+    --accent-dark:#e6007e;
+    --accent-2:#22d3d3;
+    --accent-2-dark:#00b6b6;
+    --highlight:#ffcb05;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:linear-gradient(180deg,#0f172a 0%,#1e293b 260px,#f1f5f9 260px);
+    background:linear-gradient(180deg,var(--header-1) 0%,var(--header-2) 260px,var(--page-bg) 260px);
     color:var(--text);
     min-height:100vh;
+    transition:background .2s,color .2s;
   }
   header{
     max-width:960px;
@@ -40,9 +65,46 @@
   }
   header p{
     margin:0;
-    color:#94a3b8;
+    color:#f0c6de;
     font-size:14px;
   }
+  .header-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .session-badge{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:rgba(255,255,255,0.1);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:999px;
+    padding:6px 8px 6px 14px;
+    font-size:13px;
+    color:#fff;
+  }
+  .session-badge button{
+    background:rgba(255,255,255,0.15);
+    color:#fff;
+    padding:5px 11px;
+    border-radius:999px;
+    font-size:12px;
+  }
+  .session-badge button:hover{ background:rgba(255,255,255,0.28); }
+  #themeToggle{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.2);
+    color:#fff;
+    border-radius:999px;
+    padding:7px 14px;
+  }
+  #themeToggle:hover{ background:rgba(255,255,255,0.22); }
   .clock-row{
     display:flex;
     gap:16px;
@@ -59,7 +121,7 @@
   }
   .clock-card .label{
     font-size:12px;
-    color:#94a3b8;
+    color:#f0c6de;
     text-transform:uppercase;
     letter-spacing:.04em;
   }
@@ -68,6 +130,7 @@
     font-weight:700;
     margin-top:4px;
     font-variant-numeric:tabular-nums;
+    color:var(--accent-2);
   }
   main{
     max-width:960px;
@@ -106,7 +169,7 @@
   .field input:focus{
     outline:2px solid var(--accent);
     outline-offset:1px;
-    background:#fff;
+    background:var(--panel);
   }
   .row-inline{
     display:flex;
@@ -138,7 +201,7 @@
     color:var(--text);
     border:1px solid var(--border);
   }
-  .btn-secondary:hover{ background:#eef2f7; }
+  .btn-secondary:hover{ background:var(--border); }
   .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
   #estadoConexion{
     font-size:13px;
@@ -194,8 +257,36 @@
     z-index:50;
   }
   #modalOverlay.hidden{ display:none; }
+  #loginOverlay{
+    position:fixed;
+    inset:0;
+    background:linear-gradient(180deg,var(--header-1),var(--header-2));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    z-index:60;
+  }
+  #loginOverlay.hidden{ display:none; }
+  #loginCard{
+    background:var(--panel);
+    border-radius:16px;
+    max-width:420px;
+    width:100%;
+    padding:28px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+  }
+  #loginCard h2{ margin:0 0 4px; font-size:19px; }
+  #loginCard .sub{ color:var(--muted); font-size:13px; margin-bottom:18px; }
+  #loginError{
+    color:var(--bad);
+    font-size:13px;
+    display:none;
+    margin-bottom:6px;
+  }
   #modalCard{
-    background:#fff;
+    background:var(--panel);
+    color:var(--text);
     border-radius:16px;
     max-width:760px;
     width:100%;
@@ -252,13 +343,14 @@
   }
   .toggle-btn{
     flex:1;
-    padding:8px 10px;
+    padding:10px 10px;
     border-radius:8px;
     border:1px solid var(--border);
     background:var(--panel-2);
     color:var(--text);
-    font-weight:600;
-    font-size:13px;
+    font-weight:700;
+    font-size:20px;
+    line-height:1;
     transition:all .1s;
   }
   .toggle-btn.ok.selected{
@@ -273,9 +365,13 @@
   }
   .obs-field{
     margin-top:10px;
-    display:none;
   }
-  .obs-field.show{ display:block; }
+  .obs-field label{
+    display:block;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
   .obs-field textarea{
     width:100%;
     border:1px solid var(--border);
@@ -285,6 +381,8 @@
     font-size:13px;
     resize:vertical;
     min-height:44px;
+    background:var(--panel-2);
+    color:var(--text);
   }
   #modalFooter{
     display:flex;
@@ -325,8 +423,19 @@
 <body>
 
 <header>
-  <h1>Inspección de Calidad — Registro cada 15 min</h1>
-  <p>Cada 15 minutos se abre automáticamente el formulario para registrar las 4 muestras del momento.</p>
+  <div class="header-top">
+    <div>
+      <h1>Inspección de Calidad — Registro cada 15 min</h1>
+      <p>Cada 15 minutos se abre automáticamente el formulario para registrar las 4 muestras del momento.</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <div class="session-badge">
+        👤 <span id="inspectorBadge">Sin identificar</span>
+        <button type="button" id="cambiarInspectorBtn">Cambiar</button>
+      </div>
+      <button type="button" id="themeToggle"><span id="themeToggleIcon">🌙</span> <span id="themeToggleLabel">Oscuro</span></button>
+    </div>
+  </div>
   <div class="clock-row">
     <div class="clock-card">
       <div class="label">Hora actual</div>
@@ -402,6 +511,21 @@
   </div>
 </div>
 
+<div id="loginOverlay" class="hidden">
+  <div id="loginCard">
+    <h2>¿Quién va a llenar esta ronda?</h2>
+    <div class="sub">Identifícate para que quede registrado quién estuvo a cargo del turno.</div>
+    <div class="field">
+      <label for="loginNombre">Nombre / turno</label>
+      <input id="loginNombre" type="text" placeholder="Ej: Roberto — Turno 1" autocomplete="off">
+    </div>
+    <div id="loginError">Escribe tu nombre para continuar.</div>
+    <div class="btn-row">
+      <button class="btn-primary" id="loginBtn">Comenzar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -425,8 +549,107 @@
   var historialVacio = document.getElementById("historialVacio");
   var toastEl = document.getElementById("toast");
   var estadoConexionEl = document.getElementById("estadoConexion");
+  var loginOverlay = document.getElementById("loginOverlay");
+  var loginNombre = document.getElementById("loginNombre");
+  var loginError = document.getElementById("loginError");
+  var loginBtn = document.getElementById("loginBtn");
+  var cambiarInspectorBtn = document.getElementById("cambiarInspectorBtn");
+  var inspectorBadge = document.getElementById("inspectorBadge");
+  var inspectorInput = document.getElementById("inspectorName");
+  var themeToggle = document.getElementById("themeToggle");
+  var themeToggleIcon = document.getElementById("themeToggleIcon");
+  var themeToggleLabel = document.getElementById("themeToggleLabel");
+
+  var INSPECTOR_KEY = "calidad_inspector";
+  var THEME_KEY = "calidad_theme";
 
   function pad(n){ return String(n).padStart(2,"0"); }
+
+  // ---- Tema claro / oscuro ----
+  function aplicarTema(modo){
+    if (modo === "dark"){
+      document.documentElement.setAttribute("data-theme", "dark");
+      themeToggleIcon.textContent = "☀️";
+      themeToggleLabel.textContent = "Claro";
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      themeToggleIcon.textContent = "🌙";
+      themeToggleLabel.textContent = "Oscuro";
+    }
+    localStorage.setItem(THEME_KEY, modo);
+  }
+
+  themeToggle.addEventListener("click", function(){
+    var actual = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    aplicarTema(actual === "dark" ? "light" : "dark");
+  });
+
+  (function initTema(){
+    var guardado = localStorage.getItem(THEME_KEY);
+    if (guardado === "dark" || guardado === "light"){
+      aplicarTema(guardado);
+    } else {
+      var prefiereDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      aplicarTema(prefiereDark ? "dark" : "light");
+    }
+  })();
+
+  // ---- Identificación del inspector ----
+  function inspectorActual(){
+    return (inspectorInput.value || "").trim();
+  }
+
+  function mostrarLogin(prellenar){
+    loginError.style.display = "none";
+    loginNombre.value = prellenar || "";
+    loginOverlay.classList.remove("hidden");
+    setTimeout(function(){ loginNombre.focus(); }, 50);
+  }
+
+  function ocultarLogin(){
+    loginOverlay.classList.add("hidden");
+  }
+
+  function fijarInspector(nombre){
+    inspectorInput.value = nombre;
+    inspectorBadge.textContent = nombre;
+    localStorage.setItem(INSPECTOR_KEY, nombre);
+  }
+
+  loginBtn.addEventListener("click", function(){
+    var nombre = loginNombre.value.trim();
+    if (!nombre){
+      loginError.style.display = "block";
+      return;
+    }
+    fijarInspector(nombre);
+    ocultarLogin();
+  });
+
+  loginNombre.addEventListener("keydown", function(ev){
+    if (ev.key === "Enter") loginBtn.click();
+  });
+
+  cambiarInspectorBtn.addEventListener("click", function(){
+    mostrarLogin(inspectorActual());
+  });
+
+  inspectorInput.addEventListener("change", function(){
+    var nombre = inspectorInput.value.trim();
+    if (nombre){
+      inspectorBadge.textContent = nombre;
+      localStorage.setItem(INSPECTOR_KEY, nombre);
+    }
+  });
+
+  (function initInspector(){
+    var guardado = localStorage.getItem(INSPECTOR_KEY);
+    if (guardado){
+      fijarInspector(guardado);
+    } else {
+      mostrarLogin("");
+    }
+  })();
 
   function claveRonda(d){
     return pad(d.getHours()) + ":" + pad(d.getMinutes());
@@ -449,7 +672,7 @@
   }
 
   function verificarDisparo(now){
-    if (modalAbierto) return;
+    if (modalAbierto || !loginOverlay.classList.contains("hidden")) return;
     var minuto = now.getMinutes();
     var segundo = now.getSeconds();
     if (minuto % 15 === 0 && segundo < 5){
@@ -489,20 +712,21 @@
         '<div class="indicador" data-tipo="secuencia">' +
           '<div class="ind-label">Secuencia</div>' +
           '<div class="toggle-pair">' +
-            '<button type="button" class="toggle-btn ok" data-val="OK">OK</button>' +
-            '<button type="button" class="toggle-btn bad" data-val="No OK">No OK</button>' +
+            '<button type="button" class="toggle-btn ok" data-val="OK" aria-label="Correcto">✓</button>' +
+            '<button type="button" class="toggle-btn bad" data-val="No OK" aria-label="Incorrecto">✗</button>' +
           '</div>' +
         '</div>' +
         '<div class="indicador" data-tipo="concordancia">' +
           '<div class="ind-label">Concordancia</div>' +
           '<div class="toggle-pair">' +
-            '<button type="button" class="toggle-btn ok" data-val="OK">OK</button>' +
-            '<button type="button" class="toggle-btn bad" data-val="No OK">No OK</button>' +
+            '<button type="button" class="toggle-btn ok" data-val="OK" aria-label="Correcto">✓</button>' +
+            '<button type="button" class="toggle-btn bad" data-val="No OK" aria-label="Incorrecto">✗</button>' +
           '</div>' +
         '</div>' +
       '</div>' +
       '<div class="obs-field">' +
-        '<textarea placeholder="¿Qué se observó? (ej: secuencia invertida, etiqueta no coincide con el producto...)"></textarea>' +
+        '<label>Comentario (opcional)</label>' +
+        '<textarea placeholder="¿Algo que anotar sobre esta muestra?"></textarea>' +
       '</div>';
 
     wrap.querySelectorAll(".indicador").forEach(function(ind){
@@ -511,22 +735,12 @@
         btn.addEventListener("click", function(){
           botones.forEach(function(b){ b.classList.remove("selected"); });
           btn.classList.add("selected");
-          actualizarObservacionVisible(wrap);
           modalError.style.display = "none";
         });
       });
     });
 
     return wrap;
-  }
-
-  function actualizarObservacionVisible(wrap){
-    var hayNoOk = Array.prototype.some.call(
-      wrap.querySelectorAll(".toggle-btn.bad"),
-      function(b){ return b.classList.contains("selected"); }
-    );
-    var obs = wrap.querySelector(".obs-field");
-    if (hayNoOk){ obs.classList.add("show"); }
   }
 
   function abrirModal(claveHora, esAutomatico){
@@ -556,6 +770,10 @@
   }
 
   document.getElementById("manualBtn").addEventListener("click", function(){
+    if (!inspectorActual()){
+      mostrarLogin("");
+      return;
+    }
     var now = new Date();
     abrirModal(claveRonda(now), false);
   });
@@ -599,8 +817,14 @@
       return;
     }
 
+    var inspector = inspectorActual();
+    if (!inspector){
+      cerrarModal();
+      mostrarLogin("");
+      return;
+    }
+
     var claveHora = overlay.dataset.hora;
-    var inspector = document.getElementById("inspectorName").value.trim();
     var ahora = new Date();
 
     registros.forEach(function(r){
