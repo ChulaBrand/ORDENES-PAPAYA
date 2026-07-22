@@ -268,6 +268,8 @@
     border-radius:16px;
     max-width:420px;
     width:100%;
+    max-height:88vh;
+    overflow-y:auto;
     padding:28px;
     box-shadow:0 20px 50px rgba(0,0,0,0.35);
   }
@@ -278,6 +280,43 @@
     font-size:13px;
     display:none;
     margin-bottom:6px;
+  }
+  #listaUsuarios{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:18px;
+    max-height:280px;
+    overflow-y:auto;
+  }
+  .usuario-btn{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    text-align:left;
+    background:var(--panel-2);
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:15px;
+    font-weight:600;
+    color:var(--text);
+  }
+  .usuario-btn:hover{ background:var(--border); }
+  .usuario-quitar{
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    font-size:15px;
+    padding:2px 8px;
+    border-radius:6px;
+  }
+  .usuario-quitar:hover{ background:var(--bad-bg); color:var(--bad); }
+  .usuarios-vacio{
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:4px;
   }
   #modalCard{
     background:var(--panel);
@@ -306,11 +345,18 @@
     font-size:13px;
     margin-bottom:18px;
   }
+  #modalRows{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  @media (max-width:640px){
+    #modalRows{ grid-template-columns:1fr; }
+  }
   .muestra-block{
     border:1px solid var(--border);
     border-radius:12px;
-    padding:14px 16px;
-    margin-bottom:12px;
+    padding:12px 14px;
   }
   .muestra-block .m-title{
     font-weight:600;
@@ -376,7 +422,7 @@
     font-family:inherit;
     font-size:13px;
     resize:vertical;
-    min-height:44px;
+    min-height:36px;
     background:var(--panel-2);
     color:var(--text);
   }
@@ -469,11 +515,10 @@
     </table>
     <div class="empty" id="historialVacio">Todavía no hay registros en esta sesión.</div>
     <div class="btn-row">
-      <button class="btn-secondary" id="exportBtn">Exportar historial a CSV / Excel</button>
       <button class="btn-primary" id="manualBtn">Registrar ronda ahora</button>
     </div>
     <p class="footer-note">
-      El historial de esta tabla vive mientras la página esté abierta (no se guarda al recargar). Lo que sí queda guardado de forma permanente es lo que se envía a Google Sheets, por eso conviene tener configurada la URL arriba. Exporta a CSV cuando quieras respaldar lo visto en pantalla.
+      El historial de esta tabla vive mientras la página esté abierta (no se guarda al recargar). Lo que sí queda guardado de forma permanente es lo que se envía a Google Sheets.
     </p>
   </div>
 
@@ -495,14 +540,15 @@
 <div id="loginOverlay" class="hidden">
   <div id="loginCard">
     <h2>¿Quién va a llenar esta ronda?</h2>
-    <div class="sub">Identifícate para que quede registrado quién estuvo a cargo del turno.</div>
+    <div class="sub">Toca tu nombre para identificarte. Al terminar de registrar, vuelves aquí para que entre el siguiente.</div>
+    <div id="listaUsuarios"></div>
+    <div id="loginError">Escribe un nombre para agregarlo.</div>
     <div class="field">
-      <label for="loginNombre">Nombre / turno</label>
-      <input id="loginNombre" type="text" placeholder="Ej: Roberto — Turno 1" autocomplete="off">
+      <label for="loginNombre">Agregar nuevo usuario</label>
+      <input id="loginNombre" type="text" placeholder="Nombre del inspector" autocomplete="off">
     </div>
-    <div id="loginError">Escribe tu nombre para continuar.</div>
     <div class="btn-row">
-      <button class="btn-primary" id="loginBtn">Comenzar</button>
+      <button class="btn-primary" id="loginBtn">Agregar y entrar</button>
     </div>
   </div>
 </div>
@@ -539,9 +585,11 @@
   var themeToggle = document.getElementById("themeToggle");
   var themeToggleIcon = document.getElementById("themeToggleIcon");
   var themeToggleLabel = document.getElementById("themeToggleLabel");
+  var listaUsuariosEl = document.getElementById("listaUsuarios");
 
-  var INSPECTOR_KEY = "calidad_inspector";
+  var USERS_KEY = "calidad_usuarios";
   var THEME_KEY = "calidad_theme";
+  var rondaPendiente = null;
 
   function pad(n){ return String(n).padStart(2,"0"); }
 
@@ -574,16 +622,59 @@
     }
   })();
 
-  // ---- Identificación del inspector ----
+  // ---- Usuarios registrados e identificación ----
   function inspectorActual(){
     return (inspectorInput.value || "").trim();
   }
 
-  function mostrarLogin(prellenar){
+  function cargarUsuarios(){
+    try{ return JSON.parse(localStorage.getItem(USERS_KEY) || "[]"); }
+    catch(e){ return []; }
+  }
+
+  function guardarUsuarios(lista){
+    localStorage.setItem(USERS_KEY, JSON.stringify(lista));
+  }
+
+  function escapeHtml(s){
+    var div = document.createElement("div");
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function renderUsuarios(){
+    var usuarios = cargarUsuarios();
+    listaUsuariosEl.innerHTML = "";
+    if (!usuarios.length){
+      var vacio = document.createElement("div");
+      vacio.className = "usuarios-vacio";
+      vacio.textContent = "Todavía no hay usuarios registrados. Agrega el primero abajo.";
+      listaUsuariosEl.appendChild(vacio);
+      return;
+    }
+    usuarios.forEach(function(nombre){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "usuario-btn";
+      btn.innerHTML = "<span>" + escapeHtml(nombre) + "</span><span class=\"usuario-quitar\" title=\"Quitar\">✕</span>";
+      btn.addEventListener("click", function(ev){
+        if (ev.target.closest(".usuario-quitar")){
+          ev.stopPropagation();
+          guardarUsuarios(cargarUsuarios().filter(function(n){ return n !== nombre; }));
+          renderUsuarios();
+          return;
+        }
+        seleccionarUsuario(nombre);
+      });
+      listaUsuariosEl.appendChild(btn);
+    });
+  }
+
+  function mostrarLogin(){
     loginError.style.display = "none";
-    loginNombre.value = prellenar || "";
+    loginNombre.value = "";
+    renderUsuarios();
     loginOverlay.classList.remove("hidden");
-    setTimeout(function(){ loginNombre.focus(); }, 50);
   }
 
   function ocultarLogin(){
@@ -593,7 +684,22 @@
   function fijarInspector(nombre){
     inspectorInput.value = nombre;
     inspectorBadge.textContent = nombre;
-    localStorage.setItem(INSPECTOR_KEY, nombre);
+  }
+
+  function seleccionarUsuario(nombre){
+    fijarInspector(nombre);
+    ocultarLogin();
+    if (rondaPendiente){
+      var clave = rondaPendiente;
+      rondaPendiente = null;
+      abrirModal(clave, true);
+    }
+  }
+
+  function cerrarSesion(){
+    inspectorInput.value = "";
+    inspectorBadge.textContent = "Sin identificar";
+    mostrarLogin();
   }
 
   loginBtn.addEventListener("click", function(){
@@ -602,8 +708,13 @@
       loginError.style.display = "block";
       return;
     }
-    fijarInspector(nombre);
-    ocultarLogin();
+    loginError.style.display = "none";
+    var usuarios = cargarUsuarios();
+    if (usuarios.indexOf(nombre) === -1){
+      usuarios.push(nombre);
+      guardarUsuarios(usuarios);
+    }
+    seleccionarUsuario(nombre);
   });
 
   loginNombre.addEventListener("keydown", function(ev){
@@ -611,25 +722,10 @@
   });
 
   cambiarInspectorBtn.addEventListener("click", function(){
-    mostrarLogin(inspectorActual());
+    mostrarLogin();
   });
 
-  inspectorInput.addEventListener("change", function(){
-    var nombre = inspectorInput.value.trim();
-    if (nombre){
-      inspectorBadge.textContent = nombre;
-      localStorage.setItem(INSPECTOR_KEY, nombre);
-    }
-  });
-
-  (function initInspector(){
-    var guardado = localStorage.getItem(INSPECTOR_KEY);
-    if (guardado){
-      fijarInspector(guardado);
-    } else {
-      mostrarLogin("");
-    }
-  })();
+  mostrarLogin();
 
   function claveRonda(d){
     return pad(d.getHours()) + ":" + pad(d.getMinutes());
@@ -652,14 +748,19 @@
   }
 
   function verificarDisparo(now){
-    if (modalAbierto || !loginOverlay.classList.contains("hidden")) return;
+    if (modalAbierto) return;
     var minuto = now.getMinutes();
     var segundo = now.getSeconds();
     if (minuto % 15 === 0 && segundo < 5){
       var clave = claveRonda(now);
       if (clave !== ultimaClaveDisparada && !rondasRegistradas.has(clave)){
         ultimaClaveDisparada = clave;
-        abrirModal(clave, true);
+        if (!loginOverlay.classList.contains("hidden") || !inspectorActual()){
+          rondaPendiente = clave;
+          sonarAlerta();
+        } else {
+          abrirModal(clave, true);
+        }
       }
     }
   }
@@ -751,7 +852,7 @@
 
   document.getElementById("manualBtn").addEventListener("click", function(){
     if (!inspectorActual()){
-      mostrarLogin("");
+      mostrarLogin();
       return;
     }
     var now = new Date();
@@ -800,7 +901,7 @@
     var inspector = inspectorActual();
     if (!inspector){
       cerrarModal();
-      mostrarLogin("");
+      mostrarLogin();
       return;
     }
 
@@ -825,7 +926,8 @@
     renderHistorial();
     enviarAGoogleSheets(claveHora, inspector, registros, ahora);
     cerrarModal();
-    mostrarToast("Registro guardado (" + claveHora + ").");
+    mostrarToast("Enviado ✓ (" + claveHora + ")");
+    cerrarSesion();
   });
 
   function renderHistorial(){
@@ -875,25 +977,6 @@
       mostrarToast("No se pudo contactar Google Sheets (se guardó localmente).");
     });
   }
-
-  document.getElementById("exportBtn").addEventListener("click", function(){
-    if (!historial.length){
-      mostrarToast("Todavía no hay registros para exportar.");
-      return;
-    }
-    var encabezado = ["Fecha","Hora ronda","Muestra","Secuencia","Concordancia","Observacion","Inspector"];
-    var filas = historial.map(function(r){
-      return [r.fecha, r.horaRonda, "Muestra " + r.muestra, r.secuencia, r.concordancia, r.observacion, r.inspector]
-        .map(function(v){ return '"' + String(v || "").replace(/"/g,'""') + '"'; })
-        .join(",");
-    });
-    var csv = encabezado.join(",") + "\n" + filas.join("\n");
-    var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    var link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "inspeccion_calidad_" + new Date().toISOString().slice(0,10) + ".csv";
-    link.click();
-  });
 
   renderHistorial();
   actualizarReloj();
