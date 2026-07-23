@@ -972,6 +972,19 @@
         </div>
         <button class="btn-primary admin-add-btn" id="adminGuardarTorretaBtn">Guardar y sincronizar torreta</button>
         <div id="adminTorretaEstado" class="sub" style="margin-top:10px; margin-bottom:0;"></div>
+
+        <div class="admin-section-label" style="margin-top:22px;">Modo prueba</div>
+        <div class="sub" style="margin-bottom:14px;">
+          Enciende un color a la fuerza para probar el cableado (el rojo también prueba la sirena, así está armado el Arduino). Se apaga solo a los 20 segundos, o toca "Volver a modo normal" para quitarlo antes.
+        </div>
+        <div class="btn-row">
+          <button class="btn-secondary" id="adminProbarVerdeBtn">🟢 Probar verde</button>
+          <button class="btn-secondary" id="adminProbarAmarilloBtn">🟡 Probar amarillo</button>
+          <button class="btn-secondary" id="adminProbarRojoBtn">🔴 Probar rojo + sirena</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn-secondary" id="adminProbarNormalBtn">◼ Volver a modo normal</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1051,6 +1064,10 @@
   var adminTorretaVentana = document.getElementById("adminTorretaVentana");
   var adminGuardarTorretaBtn = document.getElementById("adminGuardarTorretaBtn");
   var adminTorretaEstadoEl = document.getElementById("adminTorretaEstado");
+  var adminProbarVerdeBtn = document.getElementById("adminProbarVerdeBtn");
+  var adminProbarAmarilloBtn = document.getElementById("adminProbarAmarilloBtn");
+  var adminProbarRojoBtn = document.getElementById("adminProbarRojoBtn");
+  var adminProbarNormalBtn = document.getElementById("adminProbarNormalBtn");
 
   var USERS_KEY = "calidad_usuarios";
   var ADMIN_PIN_KEY = "calidad_admin_pin";
@@ -1713,6 +1730,33 @@
     mostrarToast("Torreta guardada.");
     sincronizarTorreta();
   });
+
+  function enviarPruebaTorreta(color){
+    var url = document.getElementById("sheetsUrl").value.trim();
+    if (!url){
+      adminTorretaEstadoEl.textContent = "No hay URL de Google Sheets configurada.";
+      return;
+    }
+    var payload = { tipo: "config_torreta_test", color: color };
+    adminTorretaEstadoEl.textContent = color
+      ? "Probando " + color + "… (se apaga solo en 20 s)"
+      : "Volviendo a modo normal…";
+    fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(function(){
+      adminTorretaEstadoEl.textContent = "Enviado. Revisa la torreta física para confirmar (el Arduino consulta cada 5 s).";
+    }).catch(function(){
+      adminTorretaEstadoEl.textContent = "No se pudo contactar Google Sheets para la prueba.";
+    });
+  }
+
+  adminProbarVerdeBtn.addEventListener("click", function(){ enviarPruebaTorreta("verde"); });
+  adminProbarAmarilloBtn.addEventListener("click", function(){ enviarPruebaTorreta("amarillo"); });
+  adminProbarRojoBtn.addEventListener("click", function(){ enviarPruebaTorreta("rojo"); });
+  adminProbarNormalBtn.addEventListener("click", function(){ enviarPruebaTorreta(""); });
 
   // ---- Turnos por franja ----
   function cargarTurnos(){
