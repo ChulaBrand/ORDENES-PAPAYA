@@ -1230,7 +1230,7 @@
 
   function actualizarHintsLogin(){
     var ahora = new Date();
-    var claveActual = rondaPendiente || claveRondaMasReciente(ahora);
+    var claveActual = rondaPendiente || claveEfectivaParaLogin(ahora);
     var actualRegistrada = rondasRegistradas.has(claveActual);
     var minutosPasados = (ahora - claveAFecha(claveActual, ahora)) / 60000;
 
@@ -1313,7 +1313,7 @@
     detenerAlertaPendiente();
     fijarInspector(nombre);
     ocultarLogin();
-    var clave = rondaPendiente || claveRondaMasReciente(new Date());
+    var clave = rondaPendiente || claveEfectivaParaLogin(new Date());
     rondaPendiente = null;
     iniciarRonda(clave);
   }
@@ -1571,6 +1571,22 @@
     var m = floor.getMinutes();
     floor.setMinutes(m - (m % 15), 0, 0);
     return claveRonda(floor);
+  }
+
+  // Decide qué ronda corresponde llenar al entrar manualmente (sin alarma activa):
+  // - Si ya estamos dentro del minuto de advertencia antes de la PRÓXIMA ronda
+  //   y esa próxima ronda todavía no se ha registrado, se adelanta a esa
+  //   (para poder registrarla en el minuto amarillo y que pase a verde).
+  // - Si no, se usa la ronda ya pasada más reciente (comportamiento anterior,
+  //   para poder llenar una ronda atrasada).
+  function claveEfectivaParaLogin(ahora){
+    var prox = siguienteMarca(ahora);
+    var claveProx = claveRonda(prox);
+    var minutosParaProx = (prox.getTime() - ahora.getTime()) / 60000;
+    if (minutosParaProx <= 1 && !rondasRegistradas.has(claveProx)){
+      return claveProx;
+    }
+    return claveRondaMasReciente(ahora);
   }
 
   function claveAFecha(clave, referencia){
