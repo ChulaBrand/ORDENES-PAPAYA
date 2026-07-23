@@ -718,10 +718,6 @@
     border-color:var(--accent);
     color:var(--accent);
   }
-  .comentario-toggle.tiene-texto{
-    border-color:var(--accent);
-    color:var(--accent);
-  }
   .obs-field-mini{
     margin-top:10px;
   }
@@ -1228,9 +1224,20 @@
     });
   }
 
+  // A diferencia de claveEfectivaParaLogin (que decide qué franja ABRIR para
+  // llenar, y deja de "adelantarse" en cuanto esa franja ya se registró),
+  // esta decide qué franja MOSTRAR en los avisos: si la próxima franja ya
+  // se registró por adelantado, hay que seguir mostrándola a ella (para
+  // reflejar el registro recién hecho) hasta que el reloj real la alcance.
+  function claveParaEstadoActual(ahora){
+    var claveProx = claveRonda(siguienteMarca(ahora));
+    if (rondasRegistradas.has(claveProx)) return claveProx;
+    return claveRondaMasReciente(ahora);
+  }
+
   function actualizarHintsLogin(){
     var ahora = new Date();
-    var claveActual = rondaPendiente || claveEfectivaParaLogin(ahora);
+    var claveActual = rondaPendiente || claveParaEstadoActual(ahora);
     var actualRegistrada = rondasRegistradas.has(claveActual);
     var minutosPasados = (ahora - claveAFecha(claveActual, ahora)) / 60000;
 
@@ -1249,7 +1256,9 @@
       rondaCompletadaHintEl.classList.remove("roja");
     }
 
-    var claveParaTurno = actualRegistrada ? claveRonda(siguienteMarca(ahora)) : claveActual;
+    var claveParaTurno = actualRegistrada
+      ? claveRonda(siguienteMarca(claveAFecha(claveActual, ahora)))
+      : claveActual;
     var turno = turnoDeFranja(claveParaTurno);
     if (turno){
       turnoHintEl.textContent = "Le toca a " + turno + " · " + claveParaTurno;
