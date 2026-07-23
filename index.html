@@ -958,6 +958,20 @@
           <button class="btn-secondary" id="adminProbarSonidoBtn">🔊 Probar sonido</button>
         </div>
         <button class="btn-primary admin-add-btn" id="adminGuardarAlarmaBtn" style="margin-top:14px;">Guardar alarma</button>
+
+        <hr style="border:none; border-top:1px solid var(--border); margin:24px 0;">
+
+        <div class="admin-section-label">Torreta física (Arduino)</div>
+        <div class="sub" style="margin-bottom:14px;">
+          Minutos antes/después de la hora exacta en que la torreta se pone en amarillo, antes de pasar a rojo con sirena.
+          Al guardar, esto y el horario de operación se envían a Google Sheets para que la torreta los use.
+        </div>
+        <div class="field">
+          <label for="adminTorretaVentana">Ventana de advertencia (minutos)</label>
+          <input id="adminTorretaVentana" type="number" min="1" max="15" step="1" class="admin-input-lg">
+        </div>
+        <button class="btn-primary admin-add-btn" id="adminGuardarTorretaBtn">Guardar y sincronizar torreta</button>
+        <div id="adminTorretaEstado" class="sub" style="margin-top:10px; margin-bottom:0;"></div>
       </div>
     </div>
   </div>
@@ -1034,6 +1048,9 @@
   var adminAlarmaSonido = document.getElementById("adminAlarmaSonido");
   var adminGuardarAlarmaBtn = document.getElementById("adminGuardarAlarmaBtn");
   var adminProbarSonidoBtn = document.getElementById("adminProbarSonidoBtn");
+  var adminTorretaVentana = document.getElementById("adminTorretaVentana");
+  var adminGuardarTorretaBtn = document.getElementById("adminGuardarTorretaBtn");
+  var adminTorretaEstadoEl = document.getElementById("adminTorretaEstado");
 
   var USERS_KEY = "calidad_usuarios";
   var ADMIN_PIN_KEY = "calidad_admin_pin";
@@ -1042,6 +1059,7 @@
   var HORARIO_KEY = "calidad_horario";
   var TURNOS_KEY = "calidad_turnos";
   var ALARMA_KEY = "calidad_alarma";
+  var TORRETA_KEY = "calidad_torreta";
   var VOLUMENES = { suave: 0.12, media: 0.22, fuerte: 0.35, muyfuerte: 0.55 };
   var rondaPendiente = null;
   var pinObjetivo = null;
@@ -1494,6 +1512,8 @@
       adminAlarmaDuracion.value = a.duracion;
       adminAlarmaVolumen.value = a.volumen;
       adminAlarmaSonido.value = a.sonido;
+      adminTorretaVentana.value = cargarTorretaConfig().ventanaMin;
+      adminTorretaEstadoEl.textContent = "";
     } else {
       adminGateError.style.display = "block";
       adminGatePinValor = "";
@@ -1644,6 +1664,54 @@
   adminGuardarHorarioBtn.addEventListener("click", function(){
     guardarHorario({ inicio: adminHoraInicio.value, fin: adminHoraFin.value });
     mostrarToast("Horario guardado.");
+    sincronizarTorreta();
+  });
+
+  // ---- Torreta física (Arduino): horario + ventana de advertencia ----
+  function cargarTorretaConfig(){
+    try{
+      var cfg = JSON.parse(localStorage.getItem(TORRETA_KEY) || "null") || {};
+      return { ventanaMin: cfg.ventanaMin || 1 };
+    }catch(e){ return { ventanaMin: 1 }; }
+  }
+
+  function guardarTorretaConfig(obj){
+    localStorage.setItem(TORRETA_KEY, JSON.stringify(obj));
+  }
+
+  function sincronizarTorreta(){
+    var url = document.getElementById("sheetsUrl").value.trim();
+    if (!url){
+      adminTorretaEstadoEl.textContent = "No hay URL de Google Sheets configurada.";
+      return;
+    }
+    var h = cargarHorario();
+    var t = cargarTorretaConfig();
+    var payload = {
+      tipo: "config_torreta",
+      horarioInicio: h.inicio || "",
+      horarioFin: h.fin || "",
+      ventanaAdvertenciaMin: t.ventanaMin
+    };
+    adminTorretaEstadoEl.textContent = "Enviando configuración a la torreta…";
+    fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(function(){
+      adminTorretaEstadoEl.textContent = "Configuración enviada. No podemos confirmar aquí si Google la recibió — revisa que la torreta cambie de estado.";
+    }).catch(function(){
+      adminTorretaEstadoEl.textContent = "No se pudo contactar Google Sheets para sincronizar la torreta.";
+    });
+  }
+
+  adminGuardarTorretaBtn.addEventListener("click", function(){
+    var ventana = parseInt(adminTorretaVentana.value, 10) || 1;
+    ventana = Math.min(15, Math.max(1, ventana));
+    guardarTorretaConfig({ ventanaMin: ventana });
+    mostrarToast("Torreta guardada.");
+    sincronizarTorreta();
   });
 
   // ---- Turnos por franja ----
